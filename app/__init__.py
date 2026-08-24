@@ -20,4 +20,6 @@ try:
 except ImportError:
     pass
 
-__version__ = "1.0.0"
+from app.version import __version__, __version_info__
+
+__all__ = ["__version__", "__version_info__"]

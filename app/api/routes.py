@@ -26,7 +26,7 @@ rag_pipeline = RAGPipeline()
 @api_bp.route("/")
 def index():
     """Render the single-page Doc-QA web application."""
-    return render_template("index.html")
+    return render_template("index.html", version=config.version)
 
 
 @api_bp.route("/api/status", methods=["GET"])
@@ -38,6 +38,7 @@ def get_status():
 
     return jsonify({
         "status": "ready",
+        "version": config.version,
         "vector_store": stats,
         "sample_files": sample_files,
         "config": {

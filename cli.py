@@ -43,7 +43,7 @@ console = Console()
 def print_banner():
     """Print the Doc-QA Assistant CLI header banner."""
     banner_text = Text()
-    banner_text.append("🌿 Doc-QA Assistant — GenAI Learning Pipeline\n", style="bold green")
+    banner_text.append(f"Doc-QA Assistant (v{config.version})\n", style="bold green")
     banner_text.append("Educational, transparent RAG system with persistent ChromaDB & LiteLLM", style="dim")
     console.print(Panel(banner_text, border_style="green", expand=False))
 
@@ -316,6 +316,7 @@ def main():
         description="Doc-QA Assistant CLI - Full GenAI Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("-v", "--version", action="version", version=f"Doc-QA Assistant v{config.version}")
     subparsers = parser.add_subparsers(dest="command", help="Available CLI commands")
 
     # Ingest command

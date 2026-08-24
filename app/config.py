@@ -63,9 +63,13 @@ class ServerConfig:
     log_level: str = "INFO"
 
 
+from app.version import __version__
+
+
 @dataclass
 class AppConfig:
     """Master application configuration."""
+    version: str = __version__
     chunk: ChunkConfig = field(default_factory=ChunkConfig)
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
@@ -100,6 +104,7 @@ class AppConfig:
         log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
         return cls(
+            version=__version__,
             chunk=ChunkConfig(chunk_size=chunk_size, chunk_overlap=chunk_overlap),
             retrieval=RetrievalConfig(top_k=top_k, score_threshold=score_threshold),
             llm=LLMConfig(

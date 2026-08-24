@@ -94,6 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch("/api/status");
             const data = await res.json();
+            if (data.version) {
+                const versionBadge = document.getElementById("app-version-badge");
+                if (versionBadge) versionBadge.textContent = `v${data.version}`;
+            }
             if (data.vector_store) {
                 const totalChunks = data.vector_store.total_chunks || 0;
                 const totalDocs = data.vector_store.total_documents || 0;

@@ -104,6 +104,20 @@ body {
     font-weight: 700;
     color: var(--color-primary);
     letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.version-badge {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
 }
 
 .brand-subtitle {
