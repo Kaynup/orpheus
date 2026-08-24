@@ -1,0 +1,24 @@
+# CLOUD ARCHITECTURE & SYSTEM RESILIENCE HANDBOOK
+
+## 1. High Availability and SLA Guarantees
+Our production cloud platform targets a 99.99% ("four nines") service level availability, permitting no more than 4.38 minutes of unscheduled downtime per month. 
+All core stateless services must be deployed across a minimum of three distinct Availability Zones (AZs) with auto-scaling groups configured between 3 and 30 instances.
+
+## 2. Distributed Caching Architecture
+To reduce load on primary relational databases, read-heavy workloads utilize Redis Cluster in a multi-node master-replica topology.
+Key caching strategies:
+- Cache-Aside (Lazy Loading): The application queries the cache first. If a cache miss occurs, data is fetched from PostgreSQL and written to Redis with an explicit Time-To-Live (TTL).
+- Default TTL: 15 minutes for user session data, 1 hour for product catalog queries, and 24 hours for static configuration data.
+- Cache Eviction: Redis is configured with volatile-lru (Least Recently Used with expiry).
+
+## 3. Resilience and Circuit Breakers
+To prevent cascading failures across microservices, inter-service HTTP/gRPC calls must use resilience mechanisms:
+- Circuit Breaker Configuration: Trips open if 50% of requests fail within a 10-second rolling window (minimum 20 requests).
+- Half-Open State: After a 30-second cooldown period, 5 probe requests are permitted to test downstream recovery.
+- Timeouts: Strict 2000ms deadline on inter-service RPCs with exponential backoff retry (maximum 3 attempts with jitter).
+
+## 4. Deployment Strategies
+Production deployments use Canary releases:
+1. Canary Stage: 5% of production traffic is routed to the new version for 15 minutes while monitoring error rates, p99 latency, and CPU spikes.
+2. Progressive Rollout: Traffic increases to 25%, 50%, and finally 100% over a 1-hour window.
+3. Automated Rollback: If error rates exceed 0.5% or p99 latency increases by more than 20%, an automated rollback is triggered immediately.

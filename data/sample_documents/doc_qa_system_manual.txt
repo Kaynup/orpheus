@@ -1,0 +1,13 @@
+# DOC-QA ASSISTANT - ARCHITECTURAL SPECIFICATION & OPERATIONAL MANUAL
+
+## 1. System Overview and Purpose
+Doc-QA Assistant is an intermediate-level Retrieval-Augmented Generation (RAG) system engineered in Python 3.10. Its architectural purpose is to ingest heterogeneous business documents (.txt and .pdf), generate dense mathematical representations (embeddings), persist vectors into ChromaDB, retrieve the most relevant semantic context for a user query, and synthesize grounded answers with explicit source citations.
+
+## 2. Ingestion and Provenance Tracking
+Raw documents enter through the Ingestion subsystem. The parser computes a SHA-256 cryptographic checksum and extracts page-by-page text content. Chunking is handled by a recursive text splitter using configurable chunk size (default 500 characters) and overlap (default 50 characters). Every chunk maintains strict provenance: document ID, source filename, page number, character offsets, and estimated token counts.
+
+## 3. Persistent Vector Storage and Retrieval
+Embeddings are computed using Chroma's all-MiniLM-L6-v2 transformer model into 384-dimensional cosine vector space. Vectors are persisted to disk in the data/chroma_db directory to ensure query capability without re-indexing after server restarts. Retrieval utilizes cosine similarity distance with a configurable top-k parameter (default 3) and a distance confidence threshold (default 0.90).
+
+## 4. Grounded Prompt Augmentation and Guardrails
+Retrieved candidate chunks are formatted into numbered source context blocks: [Source N: filename (Page X)]. System instructions mandate that the LLM only answer using factual statements directly present in the context and provide inline citations [Source N]. When the retrieved context lacks sufficient information, the model is strictly bound to execute the anti-hallucination guardrail: "I do not have sufficient information in the provided documents to answer this question."

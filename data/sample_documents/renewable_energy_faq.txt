@@ -1,0 +1,14 @@
+# RENEWABLE ENERGY SYSTEMS & BATTERY STORAGE FAQ
+
+## 1. Photovoltaic (PV) Solar Panel Efficiency
+Modern monocrystalline silicon solar panels exhibit energy conversion efficiencies ranging from 20% to 22.8% under Standard Test Conditions (STC: 1000 W/m² irradiance, 25°C cell temperature). Bifacial panels capture light from both sides, increasing yield by an additional 10% to 25% when installed over reflective surfaces such as white membrane roofs or light sand.
+
+## 2. Battery Energy Storage Systems (BESS)
+Lithium Iron Phosphate (LiFePO4) battery chemistry is the preferred technology for stationary energy storage due to superior thermal stability and cycle life.
+Key specifications:
+- Cycle Life: 6,000 to 8,000 cycles at 80% Depth of Discharge (DoD).
+- Round-Trip Efficiency (RTE): 92% to 95% for DC-coupled systems, and 88% to 90% for AC-coupled systems.
+- Operating Temperature: Optimal battery performance is maintained between 15°C and 35°C via active liquid cooling thermal management systems.
+
+## 3. Grid Frequency Regulation and Inverters
+Smart grid-forming inverters provide synthetic inertia and rapid frequency response (within 20 milliseconds) during sudden generator trips or load spikes. Inverters must comply with IEEE 1547-2018 standards for voltage and frequency ride-through capabilities to prevent localized blackout propagation.
