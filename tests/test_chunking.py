@@ -1,0 +1,43 @@
+"""Unit tests for recursive boundary-aware text chunking and provenance."""
+
+import pytest
+from app.chunking.text_splitter import RecursiveTextSplitter, TextChunk
+from app.ingestion.parser import PageContent, ParsedDocument
+
+
+def test_chunking_provenance():
+    doc = ParsedDocument(
+        doc_id="test-doc-123",
+        filename="handbook.txt",
+        file_type="txt",
+        file_path="/tmp/handbook.txt",
+        total_chars=1200,
+        checksum="abcdef123456",
+        pages=[
+            PageContent(
+                page_number=1,
+                text="Paragraph 1 is here.\n\nParagraph 2 is here with more detailed information.\n\nParagraph 3 contains extra guidelines.",
+                char_count=100,
+            )
+        ],
+    )
+
+    splitter = RecursiveTextSplitter(chunk_size=50, chunk_overlap=10)
+    chunks = splitter.chunk_document(doc)
+
+    assert len(chunks) > 0
+    for idx, chunk in enumerate(chunks):
+        assert isinstance(chunk, TextChunk)
+        assert chunk.doc_id == "test-doc-123"
+        assert chunk.source_filename == "handbook.txt"
+        assert chunk.page_number == 1
+        assert chunk.chunk_index == idx
+        assert chunk.chunk_id == f"test-doc-123_chunk_{idx}"
+        assert chunk.start_char >= 0
+        assert chunk.end_char > chunk.start_char
+        assert chunk.token_count_estimate > 0
+
+
+def test_chunking_overlap_constraint():
+    with pytest.raises(ValueError, match="chunk_overlap.*must be strictly less than chunk_size"):
+        RecursiveTextSplitter(chunk_size=100, chunk_overlap=100)
