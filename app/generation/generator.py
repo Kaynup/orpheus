@@ -90,6 +90,8 @@ class LLMGenerator:
             return bool(os.getenv("OPENROUTER_API_KEY"))
         elif "gpt" in model.lower() or "openai" in model.lower():
             return bool(os.getenv("OPENAI_API_KEY"))
+        elif "ollama" in model.lower():
+            return True
 
         # If any key is present, let litellm attempt
         return bool(
@@ -246,12 +248,19 @@ class LLMGenerator:
         )
 
         try:
-            response = litellm.completion(
-                model=target_model,
-                messages=messages,
-                temperature=target_temp,
-                max_tokens=target_max_tokens,
-            )
+            completion_kwargs = {
+                "model": target_model,
+                "messages": messages,
+                "temperature": target_temp,
+                "max_tokens": target_max_tokens,
+            }
+            if "ollama" in target_model.lower():
+                completion_kwargs["api_base"] = (
+                    self.config.ollama_api_base
+                    or os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
+                )
+
+            response = litellm.completion(**completion_kwargs)
 
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             choice = response.choices[0]

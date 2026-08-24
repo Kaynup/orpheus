@@ -43,6 +43,7 @@ class LLMConfig:
     gemini_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    ollama_api_base: Optional[str] = "http://localhost:11434"
 
 
 @dataclass
@@ -61,6 +62,8 @@ class ServerConfig:
     port: int = 5000
     debug: bool = False
     log_level: str = "INFO"
+    max_content_length: int = 16 * 1024 * 1024  # 16 MB max payload
+    secret_key: Optional[str] = None
 
 
 from app.version import __version__
@@ -91,6 +94,7 @@ class AppConfig:
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
+        ollama_base = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 
         persist_dir = os.getenv("CHROMA_PERSIST_DIR", str(BASE_DIR / "data" / "chroma_db"))
         collection_name = os.getenv("CHROMA_COLLECTION_NAME", "doc_qa_collection")
@@ -102,6 +106,8 @@ class AppConfig:
             server_host = "127.0.0.1"
         server_port = int(os.getenv("SERVER_PORT", "5000"))
         log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+        max_content_length = int(os.getenv("MAX_CONTENT_LENGTH", str(16 * 1024 * 1024)))
+        secret_key = os.getenv("SECRET_KEY") or os.urandom(32).hex()
 
         return cls(
             version=__version__,
@@ -114,6 +120,7 @@ class AppConfig:
                 gemini_api_key=gemini_key,
                 openrouter_api_key=openrouter_key,
                 openai_api_key=openai_key,
+                ollama_api_base=ollama_base,
             ),
             storage=StorageConfig(
                 persist_dir=persist_dir,
@@ -124,6 +131,8 @@ class AppConfig:
                 host=server_host,
                 port=server_port,
                 log_level=log_level,
+                max_content_length=max_content_length,
+                secret_key=secret_key,
             ),
         )
 

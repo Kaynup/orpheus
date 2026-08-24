@@ -40,10 +40,10 @@ def create_app(test_config: dict = None) -> Flask:
         static_folder=str(BASE_DIR / "app" / "static"),
     )
 
-    # Configuration defaults
+    # Configuration defaults from AppConfig
     app.config.update(
-        MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16 MB max upload
-        SECRET_KEY=os.urandom(32).hex(),
+        MAX_CONTENT_LENGTH=config.server.max_content_length,
+        SECRET_KEY=config.server.secret_key,
     )
 
     if test_config:
