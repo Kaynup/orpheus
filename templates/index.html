@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doc-QA Assistant</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="brand-title">Doc-QA Assistant</h1>
+                    <p class="brand-subtitle">Transparent GenAI Pipeline • Persistent ChromaDB • LiteLLM Orchestration
+                    </p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span id="db-status-text">ChromaDB Ready (0 chunks)</span>
+                </div>
+                <button id="btn-load-samples" class="btn btn-secondary btn-sm" title="Ingest built-in sample documents">
+                    Load Samples
+                </button>
+                <button id="btn-reset-db" class="btn btn-outline-danger btn-sm" title="Clear vector database">
+                    Reset DB
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat">
+                RAG Chat & Inspector
+            </button>
+            <button class="nav-tab" data-tab="tab-ingest" id="tab-btn-ingest">
+                Document Ingestion (<span id="tab-doc-count">0</span>)
+            </button>
+            <button class="nav-tab" data-tab="tab-eval" id="tab-btn-eval">
+                Evaluation Benchmark
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- TAB 1: RAG Chat & Live Pipeline Inspector -->
+            <section id="tab-chat" class="tab-pane active">
+                <div class="chat-layout">
+                    <!-- Left: Chat conversation stream -->
+                    <div class="chat-main-panel">
+                        <!-- Quick Question Suggestion Chips -->
+                        <div class="suggestions-container">
+                            <span class="suggestions-label">Try asking:</span>
+                            <div class="suggestion-chips">
+                                <button class="chip"
+                                    data-query="What are the core collaboration hours at Acme Corporation?">Core
+                                    Hours</button>
+                                <button class="chip"
+                                    data-query="How much is the remote office equipment stipend and what days are in-office?">Remote
+                                    Stipend</button>
+                                <button class="chip"
+                                    data-query="What is the monthly downtime limit for the 99.99% cloud SLA?">Cloud SLA
+                                    Limit</button>
+                                <button class="chip"
+                                    data-query="What is Acme's policy regarding interstellar space travel reimbursement?">Space
+                                    Policy (Guardrail Test)</button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Container -->
+                        <div id="chat-messages" class="chat-messages-area">
+                            <div class="chat-message bot-message intro-message">
+                                <div class="message-header">
+                                    <span class="message-sender">Doc-QA Assistant</span>
+                                    <span class="message-time">Ready</span>
+                                </div>
+                                <div class="message-body">
+                                    Welcome! I am your <strong>Doc-QA Assistant</strong>. I answer questions grounded
+                                    strictly in your ingested documents, cite exact sources, and execute
+                                    anti-hallucination guardrails if facts are missing.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <form id="chat-form" class="chat-input-form">
+                            <div class="input-wrapper">
+                                <input type="text" id="chat-input"
+                                    placeholder="Ask a question about your indexed documents..." autocomplete="off"
+                                    required>
+                                <button type="submit" id="chat-submit-btn" class="btn btn-primary">
+                                    <span>Ask</span>
+                                    <span class="btn-arrow">→</span>
+                                </button>
+                            </div>
+                            <div class="chat-controls-row">
+                                <div class="control-group">
+                                    <label for="chat-top-k">Top-K Chunks:</label>
+                                    <select id="chat-top-k">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3" selected>3</option>
+                                        <option value="5">5</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="chat-model-select">Model Orchestration:</label>
+                                    <select id="chat-model-select">
+                                        <option value="gemini/gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                        <option value="openrouter/google/gemini-flash-1.5">OpenRouter / Gemini Flash
+                                        </option>
+                                        <option value="openrouter/meta-llama/llama-3.1-8b-instruct">OpenRouter / Llama
+                                            3.1 8B</option>
+                                        <option value="offline" selected>Offline Grounded Extractor (No API Key
+                                            Required)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right: Live Pipeline Observability Inspector -->
+                    <div class="chat-inspector-panel">
+                        <div class="inspector-header">
+                            <h3>Live Pipeline Inspector</h3>
+                            <span class="live-tag">Truthful Backend Sync</span>
+                        </div>
+                        <p class="inspector-desc">Observe real-time state transitions as your query moves through the
+                            RAG pipeline.</p>
+
+                        <!-- Vertical Process Stepper for QA -->
+                        <div class="pipeline-stepper" id="qa-stepper">
+                            <div class="step-item" id="step-query-received">
+                                <div class="step-icon">1</div>
+                                <div class="step-content">
+                                    <div class="step-title">Query Received</div>
+                                    <div class="step-details">Waiting for user query...</div>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-query-embedded">
+                                <div class="step-icon">2</div>
+                                <div class="step-content">
+                                    <div class="step-title">Query Embedded</div>
+                                    <div class="step-details">Vector embedding (384-d)</div>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-retrieving-chunks">
+                                <div class="step-icon">3</div>
+                                <div class="step-content">
+                                    <div class="step-title">Vector Retrieval</div>
+                                    <div class="step-details">ChromaDB cosine nearest neighbor search</div>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-context-selected">
+                                <div class="step-icon">4</div>
+                                <div class="step-content">
+                                    <div class="step-title">Context Selected</div>
+                                    <div class="step-details">Threshold & relevance confidence check</div>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-prompt-prepared">
+                                <div class="step-icon">5</div>
+                                <div class="step-content">
+                                    <div class="step-title">Prompt Augmented</div>
+                                    <div class="step-details">Numbered sources & guardrail instructions</div>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-generating-answer">
+                                <div class="step-icon">6</div>
+                                <div class="step-content">
+                                    <div class="step-title">LLM Generation</div>
+                                    <div class="step-details">LiteLLM grounded synthesis</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active Query Metrics Summary -->
+                        <div class="inspector-metrics" id="inspector-metrics" style="display: none;">
+                            <h4>Execution Diagnostics</h4>
+                            <div class="metric-grid">
+                                <div class="metric-card">
+                                    <span class="metric-label">Latency</span>
+                                    <span class="metric-val" id="metric-latency">0 ms</span>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Retrieved Chunks</span>
+                                    <span class="metric-val" id="metric-chunks">0</span>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Top Similarity</span>
+                                    <span class="metric-val" id="metric-sim">0.000</span>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Tokens</span>
+                                    <span class="metric-val" id="metric-tokens">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Document Ingestion & Knowledge Base -->
+            <section id="tab-ingest" class="tab-pane">
+                <div class="ingest-layout">
+                    <!-- Left: Upload zone & chunk config -->
+                    <div class="ingest-upload-panel">
+                        <div class="panel-card">
+                            <h3>Ingest Documents</h3>
+                            <p class="panel-subtitle">Upload .txt or .pdf files to parse, chunk, embed, and store into
+                                ChromaDB.</p>
+
+                            <form id="upload-form" class="upload-form">
+                                <div class="drop-zone" id="drop-zone">
+                                    <div class="drop-icon">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </div>
+                                    <p class="drop-text">Drag & drop files here, or <span
+                                            class="browse-link">browse</span></p>
+                                    <span class="drop-hint">Supported formats: .txt, .pdf (Max: 10MB)</span>
+                                    <input type="file" id="file-input" accept=".txt,.pdf" style="display: none;">
+                                </div>
+
+                                <div id="selected-file-info" class="selected-file-info" style="display: none;">
+                                    <span id="selected-file-name">filename.txt</span>
+                                    <button type="button" id="btn-clear-file" class="btn-icon">✕</button>
+                                </div>
+
+                                <div class="config-grid">
+                                    <div class="config-item">
+                                        <label for="chunk-size-input">Chunk Size (chars):</label>
+                                        <input type="number" id="chunk-size-input" value="500" min="100" max="2000"
+                                            step="50">
+                                    </div>
+                                    <div class="config-item">
+                                        <label for="chunk-overlap-input">Chunk Overlap (chars):</label>
+                                        <input type="number" id="chunk-overlap-input" value="50" min="0" max="500"
+                                            step="10">
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="btn-upload-submit" class="btn btn-primary btn-block" disabled>
+                                    Start Ingestion Pipeline
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Live Ingestion Pipeline Stepper -->
+                        <div class="panel-card mt-4" id="ingestion-stepper-card">
+                            <h3>Ingestion Pipeline Stepper</h3>
+                            <p class="panel-subtitle">Real-time backend progress during indexing.</p>
+
+                            <div class="pipeline-stepper" id="ingest-stepper">
+                                <div class="step-item" id="istep-doc-received">
+                                    <div class="step-icon">1</div>
+                                    <div class="step-content">
+                                        <div class="step-title">Document Received</div>
+                                        <div class="step-details">Validation & file integrity</div>
+                                    </div>
+                                </div>
+                                <div class="step-item" id="istep-text-extracted">
+                                    <div class="step-icon">2</div>
+                                    <div class="step-content">
+                                        <div class="step-title">Text Extracted</div>
+                                        <div class="step-details">Page-by-page extraction & checksum</div>
+                                    </div>
+                                </div>
+                                <div class="step-item" id="istep-chunks-created">
+                                    <div class="step-icon">3</div>
+                                    <div class="step-content">
+                                        <div class="step-title">Chunks Created</div>
+                                        <div class="step-details">Boundary-aware recursive splitting</div>
+                                    </div>
+                                </div>
+                                <div class="step-item" id="istep-embeddings-generated">
+                                    <div class="step-icon">4</div>
+                                    <div class="step-content">
+                                        <div class="step-title">Embeddings Generated</div>
+                                        <div class="step-details">Dense vector transformation (384-d)</div>
+                                    </div>
+                                </div>
+                                <div class="step-item" id="istep-vectors-stored">
+                                    <div class="step-icon">5</div>
+                                    <div class="step-content">
+                                        <div class="step-title">Vectors Stored</div>
+                                        <div class="step-details">Persistent ChromaDB storage</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Indexed Documents List -->
+                    <div class="ingest-docs-panel">
+                        <div class="panel-card">
+                            <div class="docs-header">
+                                <div>
+                                    <h3>Indexed Documents</h3>
+                                    <p class="panel-subtitle">Knowledge base persisted in ChromaDB.</p>
+                                </div>
+                                <button id="btn-refresh-docs" class="btn btn-secondary btn-sm">Refresh</button>
+                            </div>
+
+                            <div id="documents-list-container" class="documents-list">
+                                <div class="empty-state">No documents indexed yet. Ingest a document or click 'Load
+                                    Samples' above.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: Evaluation Benchmark -->
+            <section id="tab-eval" class="tab-pane">
+                <div class="eval-layout">
+                    <div class="eval-header-card">
+                        <div>
+                            <h2>10-Question RAG Evaluation Benchmark</h2>
+                            <p>Automated verification testing retrieval accuracy, grounding faithfulness, citation
+                                presence, and out-of-scope hallucination guardrails.</p>
+                        </div>
+                        <button id="btn-run-eval" class="btn btn-primary">
+                            Run Full Benchmark
+                        </button>
+                    </div>
+
+                    <!-- Aggregate Summary Cards -->
+                    <div class="eval-summary-grid" id="eval-summary-grid" style="display: none;">
+                        <div class="eval-stat-card">
+                            <span class="eval-stat-label">Overall Pass Rate</span>
+                            <span class="eval-stat-val" id="eval-stat-pass-rate">0%</span>
+                        </div>
+                        <div class="eval-stat-card">
+                            <span class="eval-stat-label">Retrieval Accuracy</span>
+                            <span class="eval-stat-val" id="eval-stat-retrieval">0%</span>
+                        </div>
+                        <div class="eval-stat-card">
+                            <span class="eval-stat-label">Grounding Accuracy</span>
+                            <span class="eval-stat-val" id="eval-stat-grounding">0%</span>
+                        </div>
+                        <div class="eval-stat-card">
+                            <span class="eval-stat-label">Refusal / Guardrail Accuracy</span>
+                            <span class="eval-stat-val" id="eval-stat-refusal">0%</span>
+                        </div>
+                        <div class="eval-stat-card">
+                            <span class="eval-stat-label">Average Latency</span>
+                            <span class="eval-stat-val" id="eval-stat-latency">0 ms</span>
+                        </div>
+                    </div>
+
+                    <!-- Benchmark Test Cases Table -->
+                    <div class="panel-card mt-4">
+                        <h3>Test Case Diagnostic Results</h3>
+                        <div class="table-responsive">
+                            <table class="data-table" id="eval-results-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Category</th>
+                                        <th>Question</th>
+                                        <th>Retrieval</th>
+                                        <th>Grounding</th>
+                                        <th>Refusal</th>
+                                        <th>Status</th>
+                                        <th>Latency</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="eval-table-body">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">Click 'Run Full Benchmark' to
+                                            execute the 10 test cases.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals / Drawers for Inspecting Prompts & Chunks -->
+    <div id="inspector-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">Inspect Details</h3>
+                <button type="button" class="btn-close-modal" id="btn-close-modal">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
