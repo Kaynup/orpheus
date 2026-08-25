@@ -153,7 +153,7 @@ Added
 -----
 * **Collocated Modular Test Architecture** (``app/*/tests/``, ``tests/integration/``, ``pytest.ini``, ``Makefile``):
   - Transitioned the entire test suite from a centralized root layout to a high-cohesion, collocated architecture within each source package:
-    * ``app/api/tests/test_api_security.py``: API status, empty query validation, invalid uploads, and security header tests.
+    * ``app/api/tests/test_api_security.py``: Strict Flask-CORS origin preflight verification, untrusted origin rejection, non-API route isolation, custom allowed origins configuration, decoupled pipeline factory injection (``create_app(pipeline=...)``), and path traversal sanitization in file uploads.
     * ``app/chunking/tests/test_chunking.py``: Recursive text splitting, custom separator fallback, overlap boundaries, and token estimation tests.
     * ``app/embedding/tests/test_embedding.py``: Dynamic dimension and metric consistency, mathematical boundary and monotonicity contracts for ``distance_to_similarity`` across Cosine, L2, and IP spaces, and batch shape invariance.
     * ``app/ingestion/tests/test_ingestion.py``: Dynamic Parser Strategy Registry extensibility (OCP), unmapped extension error handling, SHA-256 buffer invariance, and config-driven ``validate_file`` size/extension limits.

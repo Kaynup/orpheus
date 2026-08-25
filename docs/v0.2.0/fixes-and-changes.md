@@ -453,5 +453,6 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/test/retrieval-and-generation` (Unit tests for dynamic prompt assets, NLP stopwords logic, and tunable LLM configurations)
   * **Commit:** `test(retrieval): add unit tests for dynamic prompt assets, NLP extraction, and generator limits`
 * `v0.2/test/api-and-security` (Integration/Security tests verifying strict Flask-CORS origin rules and Decoupled Pipeline factories)
+  * **Commit:** `test(api): add security tests for strict CORS origin whitelisting, pipeline factory, and upload sanitization`
 * `v0.2/test/frontend-components` (Client-side DOM tests using Vitest/JSDOM verifying safe UI rendering and SSE event parsing)
 * `v0.2/doc/final-coverage-and-release` (Changelog updates, test coverage reports, and v0.2.0 finalization)
