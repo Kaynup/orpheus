@@ -165,11 +165,12 @@ Added
   - Retained end-to-end multi-stage pipeline lifecycle tests in ``tests/integration/test_pipeline.py``.
   - Configured ``pytest.ini`` with unified discovery paths (``testpaths = app tests``) and clean root configuration.
   - Updated ``Makefile`` test target to execute ``python3 -m pytest -v`` across all collocated and integration suites.
-* **Automated Frontend Static Security & DOM Test Suite** (``app/static/js/tests/test_frontend_security.py``):
+* **Automated Frontend Static Security & DOM Test Suite** (``app/static/js/tests/test_frontend_security.py``, ``app/static/js/tests/test_frontend_components.py``):
   - Built an automated AST/source-scanning unit and security test suite validating all client-side JavaScript components (``app/static/js/**/*.js``).
   - Enforces zero-tolerance policy for unsafe XSS sinks (``innerHTML``, ``outerHTML``, ``document.write``).
   - Validates exclusive usage of safe DOM APIs (``textContent``, ``innerText``, ``createElement``, ``setAttribute``).
   - Guards against dangerous runtime code evaluation patterns (``eval()``, ``Function()`` constructor, string-based ``setTimeout``).
+  - Validates 100% resolution of ES6 module import dependency graphs, state pub-sub event bus methods (``on``, ``emit``), REST transport endpoints, SSE stream boundary parsing, and component lifecycle hooks (``initChat``, ``initIngestion``, ``initEvaluation``, ``initInspector``).
 * **Demanding Evaluation Benchmark & Constraint Logic** (``app/evaluation/test_dataset.py``, ``app/evaluation/evaluator.py``):
   - Extended ``EvaluationTestCase`` dataclass with strict constraint parameters:
     * ``max_length: Optional[int]``: Enforces character-length boundaries on model outputs.
