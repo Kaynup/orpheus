@@ -433,6 +433,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/frontend-templates` (Covers `REFACTOR-UI-02`)
   * **Commit:** `refactor(ui): decompose monolithic index.html into Jinja2 layout and partials`
 * `v0.2/refactor/frontend-css` (Covers `REFACTOR-UI-03`)
+  * **Commit:** `refactor(ui): organize monolithic style.css into component and layout stylesheets`
 * `v0.2/refactor/api-pipeline-singleton` (Covers `REFACTOR-API-02`)
 
 ### Step 4 Branches (Testing & Evaluation)

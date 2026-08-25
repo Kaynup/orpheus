@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Modal Dialog & Backdrop Component
+   ========================================================================== */
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(29, 36, 33, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    width: 90%;
+    max-width: 680px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.modal-body {
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.modal-body pre {
+    background: var(--bg-surface-soft);
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--border-color);
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.btn-close-modal:hover {
+    color: var(--text-main);
+}

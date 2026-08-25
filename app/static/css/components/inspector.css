@@ -1,0 +1,171 @@
+/* ==========================================================================
+   Live Pipeline Observability Stepper & Diagnostic Metrics
+   ========================================================================== */
+
+.chat-inspector-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+}
+
+.inspector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.inspector-header h3 {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.live-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.inspector-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.pipeline-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+}
+
+.step-item {
+    display: flex;
+    gap: 12px;
+    position: relative;
+}
+
+.step-item::after {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 11px;
+    width: 2px;
+    height: calc(100% - 12px);
+    background: var(--border-color-light);
+    z-index: 1;
+}
+
+.step-item:last-child::after {
+    display: none;
+}
+
+.step-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-surface-soft);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    transition: all 0.2s ease;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.step-details {
+    font-size: 11px;
+    color: var(--text-light);
+}
+
+/* Stepper States */
+.step-item.running .step-icon {
+    background: var(--status-running-bg);
+    border-color: var(--color-accent-sage);
+    color: var(--status-running-text);
+}
+
+.step-item.running .step-title {
+    color: var(--status-running-text);
+}
+
+.step-item.completed .step-icon {
+    background: var(--status-success-bg);
+    border-color: var(--color-primary);
+    color: var(--status-success-text);
+}
+
+.step-item.completed .step-title {
+    color: var(--color-primary);
+}
+
+.step-item.failed .step-icon {
+    background: var(--status-error-bg);
+    border-color: var(--color-accent-terracotta);
+    color: var(--status-error-text);
+}
+
+/* Diagnostic Metric Grid */
+.inspector-metrics {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color-light);
+}
+
+.inspector-metrics h4 {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.metric-card {
+    background: var(--bg-surface-soft);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-label {
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.metric-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+}

@@ -1,0 +1,63 @@
+/* ==========================================================================
+   Doc-QA Assistant — Earthy & Natural Design Language
+   Palette: Warm Sand, Linen, Soil, Muted Green, Forest Green
+   ========================================================================== */
+
+:root {
+    /* Earthy Color Palette */
+    --bg-base: #F7F5F0;
+    --bg-surface: #FFFFFF;
+    --bg-surface-soft: #F0ECE1;
+    --bg-surface-elevated: #FAF8F5;
+    
+    --color-primary: #254636;
+    --color-primary-hover: #1D382B;
+    --color-primary-soft: #E2ECE5;
+    --color-primary-text: #193326;
+
+    --color-accent-sage: #5F8571;
+    --color-accent-sand: #D5CBB9;
+    --color-accent-amber: #A66E2E;
+    --color-accent-terracotta: #A8483B;
+
+    --text-main: #1D2421;
+    --text-muted: #57635D;
+    --text-light: #7E8C85;
+    
+    --border-color: #DFD9CE;
+    --border-color-light: #EBE7DF;
+
+    --status-success-bg: #E3EDE6;
+    --status-success-text: #1D4A2F;
+    --status-warn-bg: #F9F0E0;
+    --status-warn-text: #7A4E1B;
+    --status-error-bg: #FBEAE8;
+    --status-error-text: #8E281D;
+    --status-running-bg: #E4EFF3;
+    --status-running-text: #1B4E63;
+
+    /* Spacing & Radii */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-soft: 0 2px 8px rgba(35, 45, 40, 0.05);
+}
+
+/* Global Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
