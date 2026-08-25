@@ -441,6 +441,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/test-architecture` (Covers `REFACTOR-TEST-01`, `FEAT-TEST-02`)
   * **Commit:** `refactor(tests): collocate unit tests with source modules and add frontend security suite`
 * `v0.2/feat/robust-eval-benchmarks` (Covers `FEAT-EVAL-01`)
+  * **Commit:** `feat(eval): enhance benchmark robustness with strict character bounds and demanding assertions`
 * `v0.2/doc/sample-documents-enrichment` (Covers `DOC-EVAL-02`)
 
 ### Final Phase Branches (Test Coverage & Documentation)

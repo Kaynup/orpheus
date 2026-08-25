@@ -127,7 +127,11 @@ class RAGEvaluator:
                 kw for kw in test_case.expected_keywords
                 if kw.lower() in answer_text.lower()
             ]
-            grounding_passed = len(matched_keywords) >= max(1, len(test_case.expected_keywords) // 2)
+            if test_case.require_all_keywords:
+                grounding_passed = len(matched_keywords) == len(test_case.expected_keywords)
+            else:
+                grounding_passed = len(matched_keywords) >= max(1, len(test_case.expected_keywords) // 2)
+
             if not grounding_passed:
                 failure_reasons.append(
                     f"Answer missing expected factual keywords: {test_case.expected_keywords} (found: {matched_keywords})"
@@ -139,7 +143,13 @@ class RAGEvaluator:
             if not citation_passed:
                 failure_reasons.append("Answer lacks required source citations.")
 
-        overall_passed = retrieval_passed and grounding_passed and citation_passed and refusal_passed
+        # 5. Evaluate Length Constraints
+        length_passed = True
+        if test_case.max_length and len(answer_text) > test_case.max_length:
+            length_passed = False
+            failure_reasons.append(f"Answer exceeds maximum length ({len(answer_text)} > {test_case.max_length} chars).")
+
+        overall_passed = retrieval_passed and grounding_passed and citation_passed and refusal_passed and length_passed
 
         logger.info(
             "Test %s (%s): Passed=%s (retrieval=%s, grounding=%s, citation=%s, refusal=%s)",
