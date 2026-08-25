@@ -374,3 +374,41 @@ This document systematically logs all architectural, modularity, coupling, and c
 | `FEAT-TEST-02` | `app/static/js/tests/` | `feat` | Add automated frontend unit and security test suite | High |
 | `FEAT-EVAL-01` | `evaluation/` | `feat` | Make benchmark parameters and test cases robust | High |
 | `DOC-EVAL-02` | `sample_documents/` | `doc` | Enrich sample corpus with detailed, up-to-date web data | Medium |
+
+---
+
+## v0.2.0 Implementation Branch Strategy
+
+To maintain a clean Git history and ensure isolated, reviewable changes, the backlog above will be implemented using the following branch structure:
+
+### Step 1 Branches (Ingestion & Storage)
+* `v0.2/refactor/ingestion-module` (Covers `FIX-INGEST-01`, `REFACTOR-INGEST-02`, `FIX-INGEST-03`, `REFACTOR-INGEST-04`)
+* `v0.2/refactor/chunking-module` (Covers `REFACTOR-CHUNK-01`, `REFACTOR-CHUNK-02`)
+* `v0.2/refactor/embedding-module` (Covers `FIX-EMBED-01`, `REFACTOR-EMBED-02`)
+* `v0.2/refactor/vector-store` (Covers `FIX-STORE-01`, `REFACTOR-STORE-02`, `REFACTOR-STORE-03`)
+* `v0.2/feat/storage-config` (Covers `FEAT-CONFIG-01`)
+
+### Step 2 Branches (Retrieval, Generation & CLI)
+* `v0.2/refactor/retrieval-module` (Covers `REFACTOR-RETRIEVAL-01`)
+* `v0.2/feat/versioned-prompts` (Covers `FEAT-PROMPT-01`)
+* `v0.2/refactor/generation-module` (Covers `FIX-GEN-01`, `REFACTOR-GEN-02`, `REFACTOR-GEN-03`, `FIX-GEN-04`, `FIX-GEN-05`)
+* `v0.2/refactor/cli-theme` (Covers `REFACTOR-CLI-01`)
+
+### Step 3 Branches (Web Interface & API)
+* `v0.2/feat/flask-cors` (Covers `FEAT-API-01`)
+* `v0.2/refactor/frontend-js-modules` (Covers `REFACTOR-UI-01`)
+* `v0.2/refactor/frontend-templates` (Covers `REFACTOR-UI-02`)
+* `v0.2/refactor/frontend-css` (Covers `REFACTOR-UI-03`)
+* `v0.2/refactor/api-pipeline-singleton` (Covers `REFACTOR-API-02`)
+
+### Step 4 Branches (Testing & Evaluation)
+* `v0.2/refactor/test-architecture` (Covers `REFACTOR-TEST-01`, `FEAT-TEST-02`)
+* `v0.2/feat/robust-eval-benchmarks` (Covers `FEAT-EVAL-01`)
+* `v0.2/doc/sample-documents-enrichment` (Covers `DOC-EVAL-02`)
+
+### Final Phase Branches (Test Coverage & Documentation)
+* `v0.2/test/ingestion-and-storage` (Unit tests for new Parser Registry, Config-driven limits, and dynamic Vector Store metadata)
+* `v0.2/test/retrieval-and-generation` (Unit tests for dynamic prompt assets, NLP stopwords logic, and tunable LLM configurations)
+* `v0.2/test/api-and-security` (Integration/Security tests verifying strict Flask-CORS origin rules and Decoupled Pipeline factories)
+* `v0.2/test/frontend-components` (Client-side DOM tests using Vitest/JSDOM verifying safe UI rendering and SSE event parsing)
+* `v0.2/doc/final-coverage-and-release` (Changelog updates, test coverage reports, and v0.2.0 finalization)
