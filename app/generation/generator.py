@@ -21,6 +21,24 @@ except ImportError:
 
 import litellm
 
+# Pydantic 2.13+ compatibility workaround for LiteLLM
+try:
+    import pydantic
+    from litellm.types import utils as litellm_utils
+    if hasattr(litellm_utils, "Message"):
+        if not hasattr(litellm_utils, "ChatCompletionReasoningSummaryTextBlock"):
+            class ChatCompletionReasoningSummaryTextBlock(pydantic.BaseModel):
+                pass
+            setattr(litellm_utils, "ChatCompletionReasoningSummaryTextBlock", ChatCompletionReasoningSummaryTextBlock)
+        if hasattr(litellm_utils.Message, "model_rebuild"):
+            litellm_utils.Message.model_rebuild()
+        if hasattr(litellm_utils, "Choices") and hasattr(litellm_utils.Choices, "model_rebuild"):
+            litellm_utils.Choices.model_rebuild()
+        if hasattr(litellm_utils, "ModelResponse") and hasattr(litellm_utils.ModelResponse, "model_rebuild"):
+            litellm_utils.ModelResponse.model_rebuild()
+except Exception:
+    pass
+
 from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
 from app.config import LLMConfig, config
 from app.logging_config import logger

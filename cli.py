@@ -108,7 +108,7 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
         console.print(f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] File not found: {file_path}")
         sys.exit(1)
 
-    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Ingesting Document: {path.name} ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting Document: {path.name} ===[/{UI_THEME['colors']['success_color']}]")
     try:
         res: IngestionResult = pipeline.ingest_document(
             file_path=path,
@@ -147,14 +147,14 @@ def handle_ingest_samples(pipeline: RAGPipeline):
         console.print(f"[yellow]No sample documents found in {samples_dir}[/yellow]")
         return
 
-    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Ingesting {len(files)} Sample Documents ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting {len(files)} Sample Documents ===[/{UI_THEME['colors']['success_color']}]")
     for f in files:
         handle_ingest(pipeline, str(f))
 
 
 def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = False, top_k: int = None):
     """Submit a question to the RAG pipeline and display transparent results."""
-    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Processing Question ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Processing Question ===[/{UI_THEME['colors']['success_color']}]")
     console.print(f"[{UI_THEME['colors']['info_color']}]Question:[/{UI_THEME['colors']['info_color']}] {question}\n")
 
     try:
