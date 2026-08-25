@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from app.chunking.tokenizer import estimate_tokens
 from app.config import ChunkConfig, config
 from app.ingestion.parser import ParsedDocument
 from app.logging_config import logger
@@ -62,7 +63,7 @@ class RecursiveTextSplitter:
                 f"chunk_overlap ({self.chunk_overlap}) must be strictly less than chunk_size ({self.chunk_size})"
             )
 
-        self.separators = separators or ["\n\n", "\n", ". ", "? ", "! ", " ", ""]
+        self.separators = separators if separators is not None else config.chunk.separators
 
     def _split_text(self, text: str, separators: List[str]) -> List[str]:
         """Recursively split text by separators until pieces fit within chunk_size."""
@@ -182,7 +183,7 @@ class RecursiveTextSplitter:
                     page_number=page.page_number,
                     start_char=start_char,
                     end_char=end_char,
-                    token_count_estimate=max(1, len(piece_clean) // 4),
+                    token_count_estimate=estimate_tokens(piece_clean),
                     metadata={
                         "file_type": document.file_type,
                         "doc_checksum": document.checksum,

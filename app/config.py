@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +20,7 @@ class ChunkConfig:
     """Settings for text chunking."""
     chunk_size: int = 500
     chunk_overlap: int = 50
+    separators: List[str] = field(default_factory=lambda: ["\n\n", "\n", ". ", "? ", "! ", " ", ""])
 
     def __post_init__(self):
         if self.chunk_overlap >= self.chunk_size:
@@ -88,6 +90,17 @@ class AppConfig:
         """Construct configuration by reading environment variables with robust defaults."""
         chunk_size = int(os.getenv("RAG_CHUNK_SIZE", "500"))
         chunk_overlap = int(os.getenv("RAG_CHUNK_OVERLAP", "50"))
+        separators_env = os.getenv("RAG_CHUNK_SEPARATORS")
+        if separators_env:
+            try:
+                chunk_separators = json.loads(separators_env)
+                if not isinstance(chunk_separators, list):
+                    raise ValueError
+            except Exception:
+                chunk_separators = ["\n\n", "\n", ". ", "? ", "! ", " ", ""]
+        else:
+            chunk_separators = ["\n\n", "\n", ". ", "? ", "! ", " ", ""]
+
         top_k = int(os.getenv("RAG_TOP_K", "3"))
         score_threshold = float(os.getenv("RAG_SCORE_THRESHOLD", "0.90"))
 
@@ -126,7 +139,7 @@ class AppConfig:
 
         return cls(
             version=__version__,
-            chunk=ChunkConfig(chunk_size=chunk_size, chunk_overlap=chunk_overlap),
+            chunk=ChunkConfig(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=chunk_separators),
             retrieval=RetrievalConfig(top_k=top_k, score_threshold=score_threshold),
             llm=LLMConfig(
                 model=llm_model,
