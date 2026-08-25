@@ -1,0 +1,7 @@
+RETRIEVED CONTEXT:
+{formatted_context}
+
+USER QUESTION:
+{query}
+
+GROUNDED ANSWER (with citations):

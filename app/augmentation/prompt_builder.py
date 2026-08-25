@@ -3,21 +3,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logging_config import logger
 from app.retrieval.retriever import RetrievedChunk
 
 
-SYSTEM_INSTRUCTION = """You are Doc-QA Assistant, an accurate, grounded GenAI document assistant.
 
-YOUR STRICT RULES:
-1. Answer the user's question ONLY using the factual information provided in the RETRIEVED CONTEXT below.
-2. CITATION REQUIREMENT: Every statement must cite its source using the format [Source N] (or [Source N, Page X] where page is available), matching the numbered sources in the context.
-3. ANTI-HALLUCINATION GUARDRAIL: If the provided RETRIEVED CONTEXT does not contain sufficient facts to answer the question completely and accurately, or if the context is empty/irrelevant, you MUST state clearly:
-   "I do not have sufficient information in the provided documents to answer this question."
-4. Do NOT speculate, extrapolate, or use outside knowledge not present in the context.
-5. Keep your tone professional, concise, and clear."""
+# Asset paths
+_ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+_SYSTEM_PROMPT_PATH = _ASSETS_DIR / "prompts" / "system-prompts" / "v1_system_instruction_001.txt"
+_QUERY_TEMPLATE_PATH = _ASSETS_DIR / "prompts" / "full-prompt-templates" / "v1_user_query_template_001.txt"
+
+
+def _load_asset(path: Path) -> str:
+    """Read and return the stripped contents of a prompt asset file.
+
+    Raises:
+        FileNotFoundError: If the asset file does not exist at the expected path.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Prompt asset file not found: {path}. "
+            "Ensure the assets/prompts/ directory is present and the file exists."
+        )
+    return path.read_text(encoding="utf-8").strip()
 
 
 @dataclass
@@ -65,10 +76,15 @@ class AugmentedPrompt:
 class PromptBuilder:
     """
     Constructs grounded, citation-mapped prompts from retrieved document chunks and user queries.
+
+    Loads the system instruction and user query template from versioned asset files at
+    ``assets/prompts/``. Providing an explicit ``system_instruction`` overrides the file-based
+    default (useful in tests or custom deployments).
     """
 
     def __init__(self, system_instruction: Optional[str] = None):
-        self.system_instruction = system_instruction or SYSTEM_INSTRUCTION
+        self.system_instruction = system_instruction or _load_asset(_SYSTEM_PROMPT_PATH)
+        self.query_template = _load_asset(_QUERY_TEMPLATE_PATH)
 
     def build_prompt(
         self,
@@ -103,13 +119,10 @@ class PromptBuilder:
         else:
             formatted_context = "[NO RELEVANT CONTEXT FOUND]"
 
-        user_content = f"""RETRIEVED CONTEXT:
-{formatted_context}
-
-USER QUESTION:
-{query.strip()}
-
-GROUNDED ANSWER (with citations):"""
+        user_content = self.query_template.format(
+            formatted_context=formatted_context,
+            query=query.strip(),
+        )
 
         full_prompt_text = f"{self.system_instruction}\n\n{user_content}"
 
