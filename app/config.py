@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from dotenv import load_dotenv
 
 # Load environment variables from .env if present
@@ -53,6 +53,10 @@ class StorageConfig:
     collection_name: str = "doc_qa_collection"
     upload_dir: str = str(BASE_DIR / "data" / "uploads")
     samples_dir: str = str(BASE_DIR / "data" / "sample_documents")
+    # Ingestion limits
+    allowed_extensions: List[str] = field(default_factory=lambda: [".txt", ".pdf"])
+    max_file_size_bytes: int = 10 * 1024 * 1024  # 10 MB
+    hash_buffer_size: int = 65536  # 64 KB read chunks for SHA-256
 
 
 @dataclass
@@ -100,6 +104,17 @@ class AppConfig:
         collection_name = os.getenv("CHROMA_COLLECTION_NAME", "doc_qa_collection")
         upload_dir = os.getenv("UPLOAD_DIR", str(BASE_DIR / "data" / "uploads"))
 
+        # Ingestion limits
+        raw_extensions = os.getenv("RAG_ALLOWED_EXTENSIONS", ".txt,.pdf")
+        allowed_extensions = [
+            ext.strip() if ext.strip().startswith(".") else f".{ext.strip()}"
+            for ext in raw_extensions.split(",")
+            if ext.strip()
+        ]
+        max_file_size_mb = int(os.getenv("RAG_MAX_FILE_SIZE_MB", "10"))
+        max_file_size_bytes = max_file_size_mb * 1024 * 1024
+        hash_buffer_size = int(os.getenv("RAG_HASH_BUFFER_SIZE", "65536"))
+
         server_host = os.getenv("SERVER_HOST", "127.0.0.1")
         # Enforce localhost/127.0.0.1 for security compliance
         if server_host == "0.0.0.0":
@@ -126,6 +141,9 @@ class AppConfig:
                 persist_dir=persist_dir,
                 collection_name=collection_name,
                 upload_dir=upload_dir,
+                allowed_extensions=allowed_extensions,
+                max_file_size_bytes=max_file_size_bytes,
+                hash_buffer_size=hash_buffer_size,
             ),
             server=ServerConfig(
                 host=server_host,

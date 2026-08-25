@@ -379,7 +379,29 @@ This document systematically logs all architectural, modularity, coupling, and c
 
 ## v0.2.0 Implementation Branch Strategy
 
-To maintain a clean Git history and ensure isolated, reviewable changes, the backlog above will be implemented using the following branch structure:
+To maintain a clean Git history and ensure isolated, reviewable changes, the backlog above will be implemented using the following branch structure.
+
+### Commit Message Convention
+
+Each branch is committed with a **single, small, one-line commit message** at the end of its implementation. Commit messages must follow this format:
+
+```
+<type>(<scope>): <short imperative summary>
+```
+
+| Field | Rule |
+| :--- | :--- |
+| `type` | Must match the branch category: `feat`, `fix`, `refactor`, `doc`, `test`, `chore` |
+| `scope` | The primary module or file area changed (e.g., `ingestion`, `config`, `generator`, `ui`) |
+| `summary` | Lowercase, imperative, ≤ 72 characters, no period at the end |
+
+**Examples:**
+* `refactor(ingestion): make validator limits and extensions config-driven`
+* `feat(api): add Flask-CORS with strict localhost origin whitelist`
+* `refactor(ui): split app.js into ES6 component modules`
+* `test(ingestion): add unit coverage for parser registry and config limits`
+
+---
 
 ### Step 1 Branches (Ingestion & Storage)
 * `v0.2/refactor/ingestion-module` (Covers `FIX-INGEST-01`, `REFACTOR-INGEST-02`, `FIX-INGEST-03`, `REFACTOR-INGEST-04`)

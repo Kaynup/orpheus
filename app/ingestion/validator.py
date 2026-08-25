@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Tuple
-
-MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
-ALLOWED_EXTENSIONS = {".txt", ".pdf"}
+from typing import Optional, Set, Tuple
 
 
 class FileValidationError(Exception):
@@ -25,11 +22,37 @@ def sanitize_filename(filename: str) -> str:
     return clean.strip() or "unnamed_.txt"
 
 
-def validate_file(file_path: str | Path) -> Tuple[bool, str]:
+def validate_file(
+    file_path: str | Path,
+    max_bytes: Optional[int] = None,
+    allowed_extensions: Optional[Set[str]] = None,
+) -> Tuple[bool, str]:
     """
     Validate that the file exists, is within size limits, has an allowed extension,
     and matches expected magic headers.
+
+    Args:
+        file_path: Path to the file to validate.
+        max_bytes: Maximum file size in bytes. Defaults to config.storage.max_file_size_bytes.
+        allowed_extensions: Set of permitted extensions (e.g. {'.txt', '.pdf'}).
+                            Defaults to config.storage.allowed_extensions.
+
+    Returns:
+        Tuple of (True, "File is valid") on success.
+
+    Raises:
+        FileValidationError: If any validation check fails.
     """
+    # Import here to avoid circular imports at module load time
+    from app.config import config
+
+    effective_max_bytes = max_bytes if max_bytes is not None else config.storage.max_file_size_bytes
+    effective_extensions: Set[str] = (
+        set(allowed_extensions)
+        if allowed_extensions is not None
+        else set(config.storage.allowed_extensions)
+    )
+
     path = Path(file_path)
 
     if not path.exists() or not path.is_file():
@@ -39,16 +62,18 @@ def validate_file(file_path: str | Path) -> Tuple[bool, str]:
     size = path.stat().st_size
     if size == 0:
         raise FileValidationError("File is empty (0 bytes).")
-    if size > MAX_FILE_SIZE_BYTES:
+    if size > effective_max_bytes:
         raise FileValidationError(
-            f"File size ({size / (1024*1024):.2f}MB) exceeds maximum limit of {MAX_FILE_SIZE_BYTES / (1024*1024):.0f}MB."
+            f"File size ({size / (1024*1024):.2f}MB) exceeds maximum limit of "
+            f"{effective_max_bytes / (1024*1024):.0f}MB."
         )
 
     # Check extension
     ext = path.suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
+    if ext not in effective_extensions:
         raise FileValidationError(
-            f"Unsupported file type '{ext}'. Allowed extensions: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+            f"Unsupported file type '{ext}'. Allowed extensions: "
+            f"{', '.join(sorted(effective_extensions))}"
         )
 
     # Magic byte / content validation
