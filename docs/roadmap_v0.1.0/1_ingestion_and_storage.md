@@ -1,6 +1,6 @@
-# Step 1: Document Ingestion, Chunking & Persistent Vector Storage
+# Document Ingestion, Chunking & Persistent Vector Storage
 
-This document provides a detailed breakdown of **Step 1** in the **Doc-QA Assistant** RAG pipeline. It covers document validation, text parsing with page-level provenance, boundary-aware recursive chunking, dense vector embeddings, and persistent storage in ChromaDB.
+This document provides a detailed breakdown of in the **Doc-QA Assistant** RAG pipeline. It covers document validation, text parsing with page-level provenance, boundary-aware recursive chunking, dense vector embeddings, and persistent storage in ChromaDB.
 
 ---
 

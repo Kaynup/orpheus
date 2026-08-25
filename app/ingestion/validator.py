@@ -22,7 +22,7 @@ def sanitize_filename(filename: str) -> str:
     safe_name = Path(normalized).name.lstrip(".")
     # Strip dangerous characters
     clean = "".join(c for c in safe_name if c.isalnum() or c in "._- ()")
-    return clean.strip() or "unnamed_document.txt"
+    return clean.strip() or "unnamed_.txt"
 
 
 def validate_file(file_path: str | Path) -> Tuple[bool, str]:
