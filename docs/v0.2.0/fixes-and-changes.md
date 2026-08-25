@@ -451,6 +451,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/test/ingestion-and-storage` (Unit tests for new Parser Registry, Config-driven limits, and dynamic Vector Store metadata)
   * **Commit:** `test(storage): add dynamic unit tests for parser registry, embedding invariants, and vector batching`
 * `v0.2/test/retrieval-and-generation` (Unit tests for dynamic prompt assets, NLP stopwords logic, and tunable LLM configurations)
+  * **Commit:** `test(retrieval): add unit tests for dynamic prompt assets, NLP extraction, and generator limits`
 * `v0.2/test/api-and-security` (Integration/Security tests verifying strict Flask-CORS origin rules and Decoupled Pipeline factories)
 * `v0.2/test/frontend-components` (Client-side DOM tests using Vitest/JSDOM verifying safe UI rendering and SSE event parsing)
 * `v0.2/doc/final-coverage-and-release` (Changelog updates, test coverage reports, and v0.2.0 finalization)

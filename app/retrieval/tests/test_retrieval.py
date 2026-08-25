@@ -51,3 +51,49 @@ def test_retrieval_empty_query(populated_retriever):
     output = populated_retriever.retrieve("")
     assert output.has_relevant_context is False
     assert len(output.chunks) == 0
+
+
+def test_retrieval_dynamic_score_threshold_override(populated_retriever):
+    """Verify retriever dynamically respects score_threshold overrides."""
+    query = "What are the core work hours?"
+
+    # Very strict threshold (rejects matches as not confident)
+    strict_output = populated_retriever.retrieve(query, score_threshold=0.001)
+    assert strict_output.has_relevant_context is False
+    assert all(c.is_confident is False for c in strict_output.chunks)
+
+    # Relaxed threshold (accepts matches as confident)
+    relaxed_output = populated_retriever.retrieve(query, score_threshold=2.0)
+    assert relaxed_output.has_relevant_context is True
+    assert all(c.is_confident is True for c in relaxed_output.chunks)
+
+
+def test_retrieval_dynamic_top_k_slicing(populated_retriever):
+    """Verify retriever dynamically respects top_k limits."""
+    query = "deployment and working hours"
+
+    out_1 = populated_retriever.retrieve(query, top_k=1)
+    assert len(out_1.chunks) == 1
+
+    out_2 = populated_retriever.retrieve(query, top_k=2)
+    assert len(out_2.chunks) == 2
+
+
+def test_retrieval_doc_id_filter(populated_retriever):
+    """Verify retriever filters results by specific doc_id."""
+    query = "traffic and core working hours"
+
+    out_d1 = populated_retriever.retrieve(query, filter_doc_id="d1")
+    assert all(c.doc_id == "d1" for c in out_d1.chunks)
+
+    out_d2 = populated_retriever.retrieve(query, filter_doc_id="d2")
+    assert all(c.doc_id == "d2" for c in out_d2.chunks)
+
+
+def test_retrieval_output_properties(populated_retriever):
+    """Verify summary metric properties on RetrievalOutput."""
+    out = populated_retriever.retrieve("core working hours", top_k=2)
+    assert len(out.chunks) > 0
+    assert out.highest_similarity == pytest.approx(max(c.similarity for c in out.chunks))
+    assert out.lowest_distance == pytest.approx(min(c.distance for c in out.chunks))
+

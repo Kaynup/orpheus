@@ -155,10 +155,13 @@ Added
   - Transitioned the entire test suite from a centralized root layout to a high-cohesion, collocated architecture within each source package:
     * ``app/api/tests/test_api_security.py``: API status, empty query validation, invalid uploads, and security header tests.
     * ``app/chunking/tests/test_chunking.py``: Recursive text splitting, custom separator fallback, overlap boundaries, and token estimation tests.
+    * ``app/embedding/tests/test_embedding.py``: Dynamic dimension and metric consistency, mathematical boundary and monotonicity contracts for ``distance_to_similarity`` across Cosine, L2, and IP spaces, and batch shape invariance.
+    * ``app/ingestion/tests/test_ingestion.py``: Dynamic Parser Strategy Registry extensibility (OCP), unmapped extension error handling, SHA-256 buffer invariance, and config-driven ``validate_file`` size/extension limits.
+    * ``app/retrieval/tests/test_retrieval.py``: Metric-agnostic score threshold filtering, dynamic ``top_k`` boundary slicing, document ID filtering, and summary property metrics.
+    * ``app/augmentation/tests/test_prompt_builder.py``: Dynamic prompt asset loading from ``assets/prompts/``, fail-fast missing asset validation, 1-indexed citation mapping, and empty context fallback handling.
+    * ``app/generation/tests/test_generator.py``: Dynamic LiteLLM telemetry toggle, fail-fast JSON asset loader, offline grounded extractive fallback, dynamic topic threshold matching, and sentence limit boundaries.
+    * ``app/storage/tests/test_vector_store.py``: Dynamic HNSW space metadata (``hnsw:space``), batch insertion slicing over ``batch_size`` increments, collection reset metadata preservation, and similarity delegation.
     * ``app/evaluation/tests/test_evaluation.py``: Automated scoring, retrieval verification, factual keyword grounding, and refusal guardrail assertions.
-    * ``app/ingestion/tests/test_ingestion.py``: Filename sanitization, non-existent file handling, empty file validation, extension filtering, and TXT parsing tests.
-    * ``app/retrieval/tests/test_retrieval.py``: Vector similarity matching, distance threshold filtering, and empty query guardrails.
-    * ``app/storage/tests/test_vector_store.py``: ChromaDB chunk persistence, HNSW distance querying, collection listing, and deletion tests.
   - Retained end-to-end multi-stage pipeline lifecycle tests in ``tests/integration/test_pipeline.py``.
   - Configured ``pytest.ini`` with unified discovery paths (``testpaths = app tests``) and clean root configuration.
   - Updated ``Makefile`` test target to execute ``python3 -m pytest -v`` across all collocated and integration suites.
