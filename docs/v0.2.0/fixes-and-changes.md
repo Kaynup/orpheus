@@ -224,3 +224,105 @@ This document systematically logs all architectural, modularity, coupling, and c
 | `FIX-GEN-04` | `generator.py` | `fix` | Configurable offline topic threshold (40%) | Medium |
 | `FIX-GEN-05` | `generator.py` | `fix` | Respect offline sentence limits via config | High |
 | `REFACTOR-CLI-01` | `cli.py` | `refactor` | Centralize and upgrade CLI UI theme/emojis | Low |
+
+---
+
+## Step 3 (Web Interface, REST/SSE APIs & Modular UI) Backlog
+
+### 11. `app/main.py` & `app/api/security.py`
+
+* **`[FEAT-API-01]` Flask-CORS Integration with Strict Origin Whitelisting**
+  * **Category**: `feat`
+  * **Current State**: No Cross-Origin Resource Sharing (CORS) headers configured.
+  * **Limitation**: Decoupled frontends (e.g., Next.js/Vite apps or local developer tools) cannot communicate with the Flask REST/SSE API endpoints.
+  * **Proposed Fix**: Integrate `flask-cors` in `app/api/security.py` and `app/main.py`. Configure strict origin whitelisting:
+    * Default allowed origins: `["http://127.0.0.1:5000", "http://localhost:5000", "http://127.0.0.1:3000", "http://localhost:3000"]`
+    * Configurable via `ServerConfig.cors_origins` from `.env`.
+
+---
+
+### 12. `app/static/js/` (Frontend JavaScript Architecture)
+
+* **`[REFACTOR-UI-01]` Deconstruct Monolithic `app.js` into Hierarchical Modular ES6 Modules**
+  * **Category**: `refactor`
+  * **Current State**: `app.js` is a single 676-line monolithic script managing all state, DOM rendering, SSE streaming, file uploads, and evaluation tables.
+  * **Limitation**: High coupling and low cohesion. Adding features to the chat or evaluation dashboard risks breaking unrelated ingestion or tab logic.
+  * **Proposed Fix**: Restructure frontend JavaScript into clean, highly cohesive ES6 component modules:
+    ```
+    app/static/js/
+    ├── app.js                      # Application bootstrap & tab navigation router
+    ├── modules/
+    │   ├── api.js                  # Centralized REST & SSE transport client
+    │   └── state.js                # Shared client state & event bus
+    └── components/
+        ├── chat.js                 # Chat messages, citations, query submission
+        ├── inspector.js            # Live pipeline stepper & inspector drawer
+        ├── ingestion.js            # Drag-and-drop upload, chunk params, doc listing
+        ├── evaluation.js           # Benchmark execution, metrics cards, table rendering
+        └── modal.js                # Reusable inspector detail modal
+    ```
+
+---
+
+### 13. `templates/` (HTML Template Structure)
+
+* **`[REFACTOR-UI-02]` Modularize Jinja2 Templates into Partials & Layout**
+  * **Category**: `refactor`
+  * **Current State**: `index.html` is a monolithic 422-line template containing all views, forms, modals, and navigation.
+  * **Limitation**: Monolithic template makes maintaining UI sections cumbersome and error-prone.
+  * **Proposed Fix**: Break `templates/` into reusable partials and a clean base layout:
+    ```
+    templates/
+    ├── base.html                   # Shell layout (HTML head, CSS/JS links, typography)
+    ├── index.html                  # Main container extending base.html
+    └── partials/
+        ├── header.html             # Navbar, DB status, and version badge
+        ├── tab_chat.html           # Chat input, message feed, and inspector panel
+        ├── tab_ingestion.html      # Dropzone upload form & indexed documents table
+        ├── tab_evaluation.html     # Benchmark metrics grid & test case results
+        └── modal_inspector.html    # Step details inspection modal
+    ```
+
+---
+
+### 14. `app/static/css/` (CSS Modularization)
+
+* **`[REFACTOR-UI-03]` Component-Based CSS Modularization**
+  * **Category**: `refactor`
+  * **Current State**: `style.css` holds all global design tokens, resets, component styles, animations, and media queries in a single 500-line file.
+  * **Limitation**: Low style cohesion and difficulty theming or updating individual panels.
+  * **Proposed Fix**: Organize stylesheets by domain with `@import` in `style.css`:
+    ```
+    app/static/css/
+    ├── style.css                   # Master stylesheet importing component styles
+    ├── base.css                    # Earthy color tokens, CSS reset, typography
+    ├── layout.css                  # Navbar, tabs, containers, grid layouts
+    ├── components/
+    │   ├── chat.css                # Message bubbles, citation pills, stepper timeline
+    │   ├── ingestion.css           # Dropzone, upload controls, document cards
+    │   ├── evaluation.css          # Metric cards, status badges, test tables
+    │   └── modal.css               # Modal backdrop and dialog cards
+    ```
+
+---
+
+### 15. `app/api/routes.py`
+
+* **`[REFACTOR-API-02]` Decouple Global Pipeline Singleton via Factory / Dependency Injection**
+  * **Category**: `refactor`
+  * **Current State**: Line 23 instantiates `rag_pipeline = RAGPipeline()` as a global module variable.
+  * **Limitation**: Tightly couples API routes to a singleton instance, preventing clean test isolation and custom pipeline configurations.
+  * **Proposed Fix**: Inject the pipeline via Flask app extension context (`current_app.extensions['pipeline']` or `get_pipeline()`).
+
+---
+
+## Summary of Step 3 Review
+
+| ID | Module | Category | Description | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| `FEAT-API-01` | `main.py` / `security.py` | `feat` | Flask-CORS integration with strict origin whitelist | High |
+| `REFACTOR-UI-01` | `static/js/` | `refactor` | Modularize `app.js` into ES6 component modules | High |
+| `REFACTOR-UI-02` | `templates/` | `refactor` | Split `index.html` into Jinja2 partials & base layout | High |
+| `REFACTOR-UI-03` | `static/css/` | `refactor` | Component-based CSS structure with design tokens | Medium |
+| `REFACTOR-API-02` | `routes.py` | `refactor` | Decouple global `RAGPipeline` singleton | Medium |
+

@@ -1,6 +1,6 @@
-# Step 3: Web Interface, REST/SSE APIs & Real-Time Observability
+# Web Interface, REST/SSE APIs & Real-Time Observability
 
-This document provides a detailed technical breakdown of **Step 3** in the **Doc-QA Assistant** RAG pipeline. It covers the Flask application architecture, Server-Sent Events (SSE) streaming routes, HTTP security controls, the earthy design language, safe DOM rendering, and live pipeline stage synchronization.
+This document provides a detailed technical breakdown of the RAG pipeline. It covers the Flask application architecture, Server-Sent Events (SSE) streaming routes, HTTP security controls, the earthy design language, safe DOM rendering, and live pipeline stage synchronization.
 
 ---
 
