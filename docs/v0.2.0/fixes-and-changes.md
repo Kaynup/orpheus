@@ -405,7 +405,9 @@ Each branch is committed with a **single, small, one-line commit message** at th
 
 ### Step 1 Branches (Ingestion & Storage)
 * `v0.2/refactor/ingestion-module` (Covers `FIX-INGEST-01`, `REFACTOR-INGEST-02`, `FIX-INGEST-03`, `REFACTOR-INGEST-04`)
+  * **Commit:** `refactor(ingestion): make file limits config-driven and introduce parser registry`
 * `v0.2/refactor/chunking-module` (Covers `REFACTOR-CHUNK-01`, `REFACTOR-CHUNK-02`)
+  * **Commit:** `refactor(chunking): make separators config-driven and decouple token estimation`
 * `v0.2/refactor/embedding-module` (Covers `FIX-EMBED-01`, `REFACTOR-EMBED-02`)
 * `v0.2/refactor/vector-store` (Covers `FIX-STORE-01`, `REFACTOR-STORE-02`, `REFACTOR-STORE-03`)
 * `v0.2/feat/storage-config` (Covers `FEAT-CONFIG-01`)
