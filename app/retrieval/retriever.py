@@ -120,7 +120,7 @@ class SemanticRetriever:
             dist = r["distance"]
             sim = r["similarity"]
             # Distance <= threshold indicates acceptable semantic proximity
-            # e.g., cosine distance <= 0.85 (meaning cosine similarity >= 0.15)
+            # The threshold metric (cosine, l2, ip) is determined dynamically via EmbeddingManager
             is_conf = dist <= threshold
 
             if is_conf:
