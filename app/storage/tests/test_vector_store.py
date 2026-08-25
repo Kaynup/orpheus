@@ -75,3 +75,93 @@ def test_vector_store_list_and_delete(temp_vector_store):
     deleted = temp_vector_store.delete_document("doc2")
     assert deleted == 1
     assert len(temp_vector_store.list_documents()) == 0
+
+
+def test_vector_store_dynamic_hnsw_metadata(temp_vector_store):
+    """Verify collection initialization dynamically assigns HNSW space matching embedding manager."""
+    expected_space = temp_vector_store.embedding_manager.distance_metric
+    actual_space = temp_vector_store._collection.metadata.get("hnsw:space")
+    assert actual_space == expected_space
+
+
+def test_vector_store_reset_collection_preserves_metadata(temp_vector_store):
+    """Verify reset_collection recreates collection and preserves dynamic HNSW metadata."""
+    chunks = [
+        TextChunk(
+            chunk_id="reset_doc_0",
+            chunk_index=0,
+            content="Temporary chunk before collection reset.",
+            doc_id="reset_doc",
+            source_filename="temp.txt",
+            page_number=1,
+            start_char=0,
+            end_char=40,
+            token_count_estimate=10,
+        )
+    ]
+    temp_vector_store.add_chunks(chunks)
+    assert temp_vector_store._collection.count() == 1
+
+    temp_vector_store.reset_collection()
+    assert temp_vector_store._collection.count() == 0
+
+    expected_space = temp_vector_store.embedding_manager.distance_metric
+    assert temp_vector_store._collection.metadata.get("hnsw:space") == expected_space
+
+
+def test_vector_store_batch_insertion_slicing(monkeypatch, temp_vector_store):
+    """Verify batch insertion safely splits chunks into configured batch_size increments."""
+    test_batch_size = 2
+    monkeypatch.setattr("app.storage.vector_store.config.storage.batch_size", test_batch_size)
+
+    total_chunks_to_create = test_batch_size + 3  # Dynamically exceeds batch limit (e.g. 5 chunks in batches of 2)
+    chunks = [
+        TextChunk(
+            chunk_id=f"batch_doc_chunk_{i}",
+            chunk_index=i,
+            content=f"Batch test document chunk index number {i} for pagination testing.",
+            doc_id="batch_doc",
+            source_filename="batch_test.txt",
+            page_number=1,
+            start_char=i * 50,
+            end_char=(i + 1) * 50,
+            token_count_estimate=12,
+        )
+        for i in range(total_chunks_to_create)
+    ]
+
+    inserted = temp_vector_store.add_chunks(chunks)
+    assert inserted == total_chunks_to_create
+    assert temp_vector_store._collection.count() == total_chunks_to_create
+
+
+def test_vector_store_empty_add_chunks(temp_vector_store):
+    """Verify add_chunks returns 0 gracefully when empty list is provided."""
+    assert temp_vector_store.add_chunks([]) == 0
+
+
+def test_vector_store_similarity_delegation(temp_vector_store):
+    """Verify similarity values in search results are delegated through embedding_manager.distance_to_similarity."""
+    chunks = [
+        TextChunk(
+            chunk_id="sim_doc_0",
+            chunk_index=0,
+            content="Monocrystalline solar cells convert photovoltaic energy efficiently.",
+            doc_id="sim_doc",
+            source_filename="solar_spec.txt",
+            page_number=1,
+            start_char=0,
+            end_char=70,
+            token_count_estimate=15,
+        )
+    ]
+    temp_vector_store.add_chunks(chunks)
+
+    results = temp_vector_store.search("photovoltaic solar energy", top_k=1)
+    assert len(results) == 1
+    res = results[0]
+
+    raw_dist = res["distance"]
+    expected_sim = temp_vector_store.embedding_manager.distance_to_similarity(raw_dist)
+    assert res["similarity"] == pytest.approx(expected_sim)
+

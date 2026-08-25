@@ -183,7 +183,7 @@ def parse_document(file_path: str | Path) -> ParsedDocument:
     To support a new format, register a BaseDocumentParser subclass in PARSER_REGISTRY.
     """
     path = Path(file_path)
-    validate_file(path)
+    validate_file(path, allowed_extensions=set(PARSER_REGISTRY.keys()))
 
     ext = path.suffix.lower()
     logger.info(
