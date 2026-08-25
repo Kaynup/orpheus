@@ -326,3 +326,51 @@ This document systematically logs all architectural, modularity, coupling, and c
 | `REFACTOR-UI-03` | `static/css/` | `refactor` | Component-based CSS structure with design tokens | Medium |
 | `REFACTOR-API-02` | `routes.py` | `refactor` | Decouple global `RAGPipeline` singleton | Medium |
 
+---
+
+## Step 4 (Testing, Evaluation & Quality Assurance) Backlog
+
+### 16. `tests/` (Test Architecture & Restructuring)
+
+* **`[REFACTOR-TEST-01]` Collocate Unit and Security Tests with Source Modules**
+  * **Category**: `refactor`
+  * **Current State**: All test files are placed flat in the `tests/` root directory.
+  * **Limitation**: Hard to debug, scale, and maintain cohesion. Developers have to context-switch between disparate directory trees.
+  * **Proposed Fix**: Restructure tests to be collocated with their respective backend/frontend modules, keeping only integration tests central:
+    * **Backend Unit Tests**: Move to `app/<module>/tests/` (e.g., `app/ingestion/tests/test_validator.py`, `app/retrieval/tests/`).
+    * **API Security Tests**: Move to `app/api/tests/` (e.g., `test_csp_headers.py`, `test_path_traversal.py`).
+    * **Frontend Tests**: Move to `app/static/js/tests/` (for DOM rendering, SSE handling, XSS protection).
+    * **Integration Tests**: Keep in `tests/integration/` for end-to-end multi-stage pipeline tests.
+
+* **`[FEAT-TEST-02]` Frontend Unit & Security Testing Suite**
+  * **Category**: `feat`
+  * **Current State**: Zero automated client-side testing for browser JavaScript.
+  * **Limitation**: Relies entirely on manual verification for DOM manipulation safety and XSS prevention.
+  * **Proposed Fix**: Add client-side test automation (e.g., using Vitest / Node.js test runner with JSDOM) in `app/static/js/tests/` to test safe `textContent` rendering, citation pill creation, and SSE event streaming logic.
+
+---
+
+### 17. `app/evaluation/` & Sample Corpus
+
+* **`[FEAT-EVAL-01]` Robust Benchmark Test Suite Expansion**
+  * **Category**: `feat`
+  * **Current State**: `BENCHMARK_TEST_SUITE` contains basic, easily solvable factual questions.
+  * **Limitation**: Gives the LLM too easy of a task, failing to stress-test context boundaries or response length limits.
+  * **Proposed Fix**: Increase the robustness of the existing evaluation benchmark parameters. Without inventing entirely new paradigms, make the test assertions and prompts stricter (e.g., tighter topic thresholds, strict character limits, and demanding multi-document synthesis constraints).
+
+* **`[DOC-EVAL-02]` Enrich Sample Documents Corpus (`data/sample_documents/`)**
+  * **Category**: `doc`
+  * **Current State**: Sample files are concise single-topic plain text files.
+  * **Limitation**: Simple documents don't reflect real-world, complex scenarios for the chunker and retriever to solve.
+  * **Proposed Fix**: Update and expand `data/sample_documents/` with highly detailed, up-to-date, and elaborative real-world documents. Use web search to fetch rich content (e.g., technical specs, lengthy policies) to create a robust playground for testing retrieval efficacy.
+
+---
+
+## Summary of Step 4 Review
+
+| ID | Module | Category | Description | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| `REFACTOR-TEST-01` | `tests/` | `refactor` | Collocate unit/security tests within component dirs | High |
+| `FEAT-TEST-02` | `app/static/js/tests/` | `feat` | Add automated frontend unit and security test suite | High |
+| `FEAT-EVAL-01` | `evaluation/` | `feat` | Make benchmark parameters and test cases robust | High |
+| `DOC-EVAL-02` | `sample_documents/` | `doc` | Enrich sample corpus with detailed, up-to-date web data | Medium |

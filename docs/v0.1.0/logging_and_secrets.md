@@ -1,6 +1,6 @@
 # Logging, Secret Masking, and Security in Doc-QA Assistant
 
-This document explains the logging architecture of the **Doc-QA Assistant**, how secret masking works in [`app/logging_config.py`](file:///home/remitpe/MAIN/rag-chat/app/logging_config.py), why secrets must never leak into logs, and how log severity levels are structured.
+This document explains the logging architecture, how secret masking works in [`app/logging_config.py`](file:///home/remitpe/MAIN/rag-chat/app/logging_config.py), why secrets must never leak into logs, and how log severity levels are structured.
 
 ---
 

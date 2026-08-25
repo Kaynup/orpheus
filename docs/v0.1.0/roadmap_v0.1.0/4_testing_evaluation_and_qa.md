@@ -1,12 +1,12 @@
-# Step 4: Automated Testing, Benchmark Evaluation & Quality Assurance
+# Automated Testing, Benchmark Evaluation & Quality Assurance
 
-This document provides a detailed technical breakdown of **Step 4** in the **Doc-QA Assistant** RAG pipeline. It covers the full test suite architecture, automated benchmark evaluation, regression testing, and quality assurance workflows.
+This document provides a detailed technical breakdown of the RAG pipeline. It covers the full test suite architecture, automated benchmark evaluation, regression testing, and quality assurance workflows.
 
 ---
 
 ## 1. Architectural Goal & Flow
 
-Step 4 provides rigorous, automated verification across every layer of the Doc-QA Assistant—from individual unit functions (filename sanitization, chunking math) to end-to-end RAG pipelines, API security headers, and evaluation benchmark grading.
+Provides rigorous, automated verification across every layer of the Doc-QA Assistant—from individual unit functions (filename sanitization, chunking math) to end-to-end RAG pipelines, API security headers, and evaluation benchmark grading.
 
 ```
 [Pytest Automated Test Suite]

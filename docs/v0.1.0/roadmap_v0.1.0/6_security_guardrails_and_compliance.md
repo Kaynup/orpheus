@@ -1,6 +1,6 @@
 # Step 6: Comprehensive Security Model, Guardrails & Compliance
 
-This document provides a detailed technical breakdown of **Step 6** in the **Doc-QA Assistant** RAG pipeline. It covers the end-to-end security architecture, threat model, anti-hallucination guardrails, secret protection, input sanitization, CSP configuration, and compliance verification.
+This document provides a detailed technical breakdown of the RAG pipeline. It covers the end-to-end security architecture, threat model, anti-hallucination guardrails, secret protection, input sanitization, CSP configuration, and compliance verification.
 
 ---
 

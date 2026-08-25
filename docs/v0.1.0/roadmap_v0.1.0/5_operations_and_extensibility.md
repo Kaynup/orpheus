@@ -1,6 +1,6 @@
-# Step 5: Operations, Deployment & Extensibility
+# Operations, Deployment & Extensibility
 
-This document provides a detailed technical breakdown of **Step 5** in the **Doc-QA Assistant** RAG pipeline. It covers operational workflows, running the system in production/development, configuring LLM providers, persistent storage maintenance, security checklists, and how to extend the pipeline with new document formats and embedding models.
+This document provides a detailed technical breakdown of the RAG pipeline. It covers operational workflows, running the system in production/development, configuring LLM providers, persistent storage maintenance, security checklists, and how to extend the pipeline with new document formats and embedding models.
 
 ---
 
