@@ -25,7 +25,7 @@ except ImportError:
     pass
 
 from app.api.routes import api_bp
-from app.api.security import setup_security_headers
+from app.api.security import setup_cors, setup_security_headers
 from app.config import config
 from app.logging_config import logger
 
@@ -49,8 +49,9 @@ def create_app(test_config: dict = None) -> Flask:
     if test_config:
         app.config.update(test_config)
 
-    # Attach security middleware
+    # Attach security middleware & CORS
     setup_security_headers(app)
+    setup_cors(app)
 
     # Register API blueprint
     app.register_blueprint(api_bp)

@@ -75,6 +75,14 @@ class ServerConfig:
     log_level: str = "INFO"
     max_content_length: int = 16 * 1024 * 1024  # 16 MB max payload
     secret_key: Optional[str] = None
+    cors_origins: List[str] = field(
+        default_factory=lambda: [
+            "http://127.0.0.1:5000",
+            "http://localhost:5000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3000",
+        ]
+    )
 
 
 from app.version import __version__
@@ -147,6 +155,16 @@ class AppConfig:
         log_level = os.getenv("LOG_LEVEL", "INFO").upper()
         max_content_length = int(os.getenv("MAX_CONTENT_LENGTH", str(16 * 1024 * 1024)))
         secret_key = os.getenv("SECRET_KEY") or os.urandom(32).hex()
+        raw_cors = os.getenv("CORS_ORIGINS")
+        if raw_cors:
+            cors_origins = [orig.strip() for orig in raw_cors.split(",") if orig.strip()]
+        else:
+            cors_origins = [
+                "http://127.0.0.1:5000",
+                "http://localhost:5000",
+                "http://127.0.0.1:3000",
+                "http://localhost:3000",
+            ]
 
         return cls(
             version=__version__,
@@ -180,6 +198,7 @@ class AppConfig:
                 log_level=log_level,
                 max_content_length=max_content_length,
                 secret_key=secret_key,
+                cors_origins=cors_origins,
             ),
         )
 

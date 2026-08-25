@@ -5,9 +5,14 @@ from __future__ import annotations
 import os
 import uuid
 from pathlib import Path
-from typing import Tuple
+from typing import List, Optional, Tuple
 from flask import Response, request
 from werkzeug.datastructures import FileStorage
+
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 
 from app.config import config
 from app.ingestion.validator import (
@@ -16,6 +21,20 @@ from app.ingestion.validator import (
     validate_file,
 )
 from app.logging_config import logger
+
+
+def setup_cors(app, allowed_origins: Optional[List[str]] = None) -> None:
+    """Configure Flask-CORS with strict origin whitelisting on /api/* endpoints."""
+    origins = allowed_origins or config.server.cors_origins
+    if CORS is not None:
+        CORS(
+            app,
+            resources={r"/api/*": {"origins": origins}},
+            supports_credentials=True,
+        )
+        logger.info("Flask-CORS initialized for /api/* with allowed origins: %s", origins)
+    else:
+        logger.warning("flask_cors package not found; skipping automatic CORS attachment.")
 
 
 def setup_security_headers(app):

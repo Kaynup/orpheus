@@ -1,6 +1,7 @@
 # Doc-QA Assistant Dependencies
 # Compatible with Python 3.10+
 flask>=3.0.0
+flask-cors>=4.0.0
 chromadb>=0.4.22
 litellm>=1.0.0
 pypdf>=4.0.0
