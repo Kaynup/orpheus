@@ -409,6 +409,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/chunking-module` (Covers `REFACTOR-CHUNK-01`, `REFACTOR-CHUNK-02`)
   * **Commit:** `refactor(chunking): make separators config-driven and decouple token estimation`
 * `v0.2/refactor/embedding-module` (Covers `FIX-EMBED-01`, `REFACTOR-EMBED-02`)
+  * **Commit:** `refactor(embedding): dynamically resolve embedding model and expose metric properties`
 * `v0.2/refactor/vector-store` (Covers `FIX-STORE-01`, `REFACTOR-STORE-02`, `REFACTOR-STORE-03`)
 * `v0.2/feat/storage-config` (Covers `FEAT-CONFIG-01`)
 

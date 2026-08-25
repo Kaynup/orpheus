@@ -11,6 +11,7 @@ except ImportError:
 
 import chromadb.utils.embedding_functions as ef
 
+from app.config import config
 from app.logging_config import logger
 
 
@@ -24,8 +25,39 @@ class EmbeddingManager:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         self.model_name = model_name
         logger.info("Initializing EmbeddingManager with model: %s", model_name)
-        # Chroma's DefaultEmbeddingFunction downloads ONNX model to cache if not present
-        self._ef = ef.DefaultEmbeddingFunction()
+        
+        if self.model_name == "all-MiniLM-L6-v2":
+            self._ef = ef.DefaultEmbeddingFunction()
+        else:
+            # Fallback for future models or external providers
+            logger.warning("Model %s not explicitly mapped, falling back to DefaultEmbeddingFunction", model_name)
+            self._ef = ef.DefaultEmbeddingFunction()
+            
+    @property
+    def dimension(self) -> int:
+        """Return the vector dimension of the current embedding model."""
+        if self.model_name == "all-MiniLM-L6-v2":
+            return 384
+        return 384  # Default fallback
+
+    @property
+    def distance_metric(self) -> str:
+        """Return the configured distance space metric for vector comparisons."""
+        # Read from config if available (will be added in storage-config branch), else cosine
+        return getattr(config.storage, "distance_metric", "cosine")
+
+    def distance_to_similarity(self, distance: float) -> float:
+        """Convert a raw distance from ChromaDB into a [0.0, 1.0] similarity score."""
+        metric = self.distance_metric
+        if metric == "cosine":
+            return max(0.0, 1.0 - distance)
+        elif metric == "ip":
+            return max(0.0, 1.0 - distance)
+        elif metric == "l2":
+            return 1.0 / (1.0 + distance)
+        
+        # Default fallback
+        return max(0.0, 1.0 - distance)
 
     def get_embedding_function(self):
         """Return the underlying Chroma-compatible embedding function."""
