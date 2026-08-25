@@ -435,6 +435,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/frontend-css` (Covers `REFACTOR-UI-03`)
   * **Commit:** `refactor(ui): organize monolithic style.css into component and layout stylesheets`
 * `v0.2/refactor/api-pipeline-singleton` (Covers `REFACTOR-API-02`)
+  * **Commit:** `refactor(api): decouple global pipeline singleton via app extension injection`
 
 ### Step 4 Branches (Testing & Evaluation)
 * `v0.2/refactor/test-architecture` (Covers `REFACTOR-TEST-01`, `FEAT-TEST-02`)

@@ -19,8 +19,25 @@ from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
 
 api_bp = Blueprint("api", __name__)
 
-# Shared pipeline instance
-rag_pipeline = RAGPipeline()
+_default_pipeline: RAGPipeline | None = None
+
+
+def get_pipeline() -> RAGPipeline:
+    """Retrieve the RAGPipeline instance from current Flask application context or fallback."""
+    from flask import current_app
+
+    try:
+        if current_app:
+            pipeline = current_app.extensions.get("rag_pipeline")
+            if pipeline is not None:
+                return pipeline
+    except RuntimeError:
+        pass
+
+    global _default_pipeline
+    if _default_pipeline is None:
+        _default_pipeline = RAGPipeline()
+    return _default_pipeline
 
 
 @api_bp.route("/")
@@ -32,7 +49,8 @@ def index():
 @api_bp.route("/api/status", methods=["GET"])
 def get_status():
     """Return persistent vector database status and configuration."""
-    stats = rag_pipeline.vector_store.get_collection_stats()
+    pipeline = get_pipeline()
+    stats = pipeline.vector_store.get_collection_stats()
     samples_dir = Path(config.storage.samples_dir)
     sample_files = [f.name for f in samples_dir.glob("*.*")] if samples_dir.exists() else []
 
@@ -56,14 +74,16 @@ def get_status():
 @api_bp.route("/api/documents", methods=["GET"])
 def list_documents():
     """List all indexed documents with metadata summary."""
-    docs = rag_pipeline.vector_store.list_documents()
+    pipeline = get_pipeline()
+    docs = pipeline.vector_store.list_documents()
     return jsonify({"documents": docs, "total": len(docs)})
 
 
 @api_bp.route("/api/documents/<doc_id>", methods=["DELETE"])
 def delete_document(doc_id: str):
     """Delete a document by ID."""
-    deleted = rag_pipeline.vector_store.delete_document(doc_id)
+    pipeline = get_pipeline()
+    deleted = pipeline.vector_store.delete_document(doc_id)
     return jsonify({"success": True, "deleted_chunks": deleted})
 
 
@@ -79,7 +99,8 @@ def ingest_file():
 
     try:
         saved_path, safe_name = save_uploaded_file(file)
-        result: IngestionResult = rag_pipeline.ingest_document(
+        pipeline = get_pipeline()
+        result: IngestionResult = pipeline.ingest_document(
             file_path=saved_path,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -107,6 +128,7 @@ def ingest_file_stream():
     except Exception as err:
         return jsonify({"error": str(err)}), 400
 
+    pipeline = get_pipeline()
     event_queue: queue.Queue = queue.Queue()
 
     def sse_event_callback(event: PipelineEvent):
@@ -114,7 +136,7 @@ def ingest_file_stream():
 
     def run_ingestion():
         try:
-            res = rag_pipeline.ingest_document(
+            res = pipeline.ingest_document(
                 file_path=saved_path,
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
@@ -155,7 +177,8 @@ def query():
     temperature = data.get("temperature")
 
     try:
-        result: QueryResult = rag_pipeline.answer_query(
+        pipeline = get_pipeline()
+        result: QueryResult = pipeline.answer_query(
             query=question,
             top_k=top_k,
             score_threshold=score_threshold,
@@ -183,6 +206,7 @@ def query_stream():
     model = data.get("model")
     temperature = data.get("temperature")
 
+    pipeline = get_pipeline()
     event_queue: queue.Queue = queue.Queue()
 
     def sse_event_callback(event: PipelineEvent):
@@ -190,7 +214,7 @@ def query_stream():
 
     def run_query():
         try:
-            res = rag_pipeline.answer_query(
+            res = pipeline.answer_query(
                 query=question,
                 top_k=top_k,
                 score_threshold=score_threshold,
@@ -228,9 +252,10 @@ def ingest_samples():
 
     files = sorted(list(samples_dir.glob("*.txt")) + list(samples_dir.glob("*.pdf")))
     results = []
+    pipeline = get_pipeline()
     for f in files:
         try:
-            res = rag_pipeline.ingest_document(f)
+            res = pipeline.ingest_document(f)
             results.append({"filename": f.name, "chunks": res.chunk_count, "status": "success"})
         except Exception as err:
             results.append({"filename": f.name, "error": str(err), "status": "failed"})
@@ -242,7 +267,8 @@ def ingest_samples():
 def evaluate_benchmark():
     """Run the 10 benchmark test cases and return the full evaluation report."""
     try:
-        evaluator = RAGEvaluator(rag_pipeline)
+        pipeline = get_pipeline()
+        evaluator = RAGEvaluator(pipeline)
         report = evaluator.run_benchmark()
         return jsonify({"success": True, "report": report.to_dict()})
     except Exception as err:
@@ -254,7 +280,8 @@ def evaluate_benchmark():
 def reset_vector_store():
     """Reset and clear all vectors in the collection."""
     try:
-        rag_pipeline.vector_store.reset_collection()
+        pipeline = get_pipeline()
+        pipeline.vector_store.reset_collection()
         return jsonify({"success": True, "message": "Vector store reset successfully."})
     except Exception as err:
         return jsonify({"error": str(err)}), 500
