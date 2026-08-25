@@ -1,0 +1,27 @@
+{
+  "icons": {
+    "status_waiting": "⏳",
+    "status_running": "⚡",
+    "status_completed": "✔",
+    "status_failed": "✖",
+    "status_default": "•",
+    "test_passed": "✔",
+    "test_failed": "✖",
+    "bullet": "•",
+    "prompt_arrow": "›"
+  },
+  "colors": {
+    "status_waiting": "yellow",
+    "status_running": "cyan",
+    "status_completed": "green",
+    "status_failed": "red",
+    "status_default": "white",
+    "banner_border": "green",
+    "table_primary_border": "green",
+    "table_accent_border": "cyan",
+    "warning_border": "yellow",
+    "error_color": "bold red",
+    "success_color": "bold green",
+    "info_color": "bold cyan"
+  }
+}

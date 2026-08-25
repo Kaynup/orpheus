@@ -423,6 +423,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/generation-module` (Covers `FIX-GEN-01`, `REFACTOR-GEN-02`, `REFACTOR-GEN-03`, `FIX-GEN-04`, `FIX-GEN-05`)
   * **Commit:** `refactor(generation): externalize refusal texts and NLP assets and make offline limits config-driven`
 * `v0.2/refactor/cli-theme` (Covers `REFACTOR-CLI-01`)
+  * **Commit:** `refactor(cli): centralize CLI theme, status glyphs, and styling tokens`
 
 ### Step 3 Branches (Web Interface & API)
 * `v0.2/feat/flask-cors` (Covers `FEAT-API-01`)

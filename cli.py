@@ -6,6 +6,7 @@ CLI TUI Interface
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import typing
 from pathlib import Path
@@ -39,29 +40,63 @@ from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
 console = Console()
 
 
+# Centralized CLI Theme and Glyphs
+_THEME_PATH = Path(__file__).resolve().parent / "assets" / "configs" / "cli_theme.json"
+
+
+def _load_cli_theme() -> dict[str, dict[str, str]]:
+    """Load CLI theme asset with built-in resilient fallback."""
+    if _THEME_PATH.is_file():
+        try:
+            with open(_THEME_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "icons": {
+            "status_waiting": "⏳",
+            "status_running": "⚡",
+            "status_completed": "✔",
+            "status_failed": "✖",
+            "status_default": "•",
+            "test_passed": "✔",
+            "test_failed": "✖",
+            "bullet": "•",
+            "prompt_arrow": "›",
+        },
+        "colors": {
+            "status_waiting": "yellow",
+            "status_running": "cyan",
+            "status_completed": "green",
+            "status_failed": "red",
+            "status_default": "white",
+            "banner_border": "green",
+            "table_primary_border": "green",
+            "table_accent_border": "cyan",
+            "warning_border": "yellow",
+            "error_color": "bold red",
+            "success_color": "bold green",
+            "info_color": "bold cyan",
+        },
+    }
+
+
+UI_THEME = _load_cli_theme()
+
+
 def print_banner():
     """Print the Doc-QA Assistant CLI header banner."""
     banner_text = Text()
-    banner_text.append(f"Doc-QA Assistant (v{config.version})\n", style="bold green")
+    banner_text.append(f"(v{config.version})\n", style=UI_THEME["colors"]["success_color"])
     banner_text.append("Educational, transparent RAG system with persistent ChromaDB & LiteLLM", style="dim")
-    console.print(Panel(banner_text, border_style="green", expand=False))
+    console.print(Panel(banner_text, border_style=UI_THEME["colors"]["banner_border"], expand=False))
 
 
 def cli_event_listener(event: PipelineEvent):
     """Real-time event printer for truthful CLI observability."""
-    status_icon = {
-        "WAITING": "⏳",
-        "RUNNING": "⚡",
-        "COMPLETED": "✅",
-        "FAILED": "❌",
-    }.get(event.status.value, "•")
-
-    stage_color = {
-        "WAITING": "yellow",
-        "RUNNING": "cyan",
-        "COMPLETED": "green",
-        "FAILED": "red",
-    }.get(event.status.value, "white")
+    status_key = f"status_{event.status.value.lower()}"
+    status_icon = UI_THEME["icons"].get(status_key, UI_THEME["icons"]["status_default"])
+    stage_color = UI_THEME["colors"].get(status_key, UI_THEME["colors"]["status_default"])
 
     console.print(f"  {status_icon} [{stage_color}]{event.stage.value:<20}[/{stage_color}] {event.message}")
 
@@ -70,10 +105,10 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
     """Ingest a single document file."""
     path = Path(file_path)
     if not path.exists():
-        console.print(f"[bold red]Error:[/bold red] File not found: {file_path}")
+        console.print(f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] File not found: {file_path}")
         sys.exit(1)
 
-    console.print(f"\n[bold green]=== Ingesting Document: {path.name} ===[/bold green]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Ingesting Document: {path.name} ===[/{UI_THEME['colors']['success_color']}]")
     try:
         res: IngestionResult = pipeline.ingest_document(
             file_path=path,
@@ -82,7 +117,7 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
             event_callback=cli_event_listener,
         )
 
-        table = Table(title="Ingestion Summary", border_style="green")
+        table = Table(title="Ingestion Summary", border_style=UI_THEME["colors"]["table_primary_border"])
         table.add_column("Property", style="cyan")
         table.add_column("Value", style="bold white")
         table.add_row("Document ID", res.doc_id[:12] + "...")
@@ -96,7 +131,7 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
         console.print(table)
 
     except Exception as err:
-        console.print(f"\n[bold red]Ingestion Failed:[/bold red] {err}")
+        console.print(f"\n[{UI_THEME['colors']['error_color']}]Ingestion Failed:[/{UI_THEME['colors']['error_color']}] {err}")
         sys.exit(1)
 
 
@@ -104,7 +139,7 @@ def handle_ingest_samples(pipeline: RAGPipeline):
     """Ingest all sample documents from data/sample_documents/."""
     samples_dir = Path(config.storage.samples_dir)
     if not samples_dir.exists():
-        console.print(f"[bold red]Error:[/bold red] Sample documents directory not found: {samples_dir}")
+        console.print(f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] Sample documents directory not found: {samples_dir}")
         return
 
     files = sorted(list(samples_dir.glob("*.txt")) + list(samples_dir.glob("*.pdf")))
@@ -112,15 +147,15 @@ def handle_ingest_samples(pipeline: RAGPipeline):
         console.print(f"[yellow]No sample documents found in {samples_dir}[/yellow]")
         return
 
-    console.print(f"\n[bold green]=== Ingesting {len(files)} Sample Documents ===[/bold green]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Ingesting {len(files)} Sample Documents ===[/{UI_THEME['colors']['success_color']}]")
     for f in files:
         handle_ingest(pipeline, str(f))
 
 
 def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = False, top_k: int = None):
     """Submit a question to the RAG pipeline and display transparent results."""
-    console.print(f"\n[bold green]=== Processing Question ===[/bold green]")
-    console.print(f"[bold cyan]Question:[/bold cyan] {question}\n")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Processing Question ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(f"[{UI_THEME['colors']['info_color']}]Question:[/{UI_THEME['colors']['info_color']}] {question}\n")
 
     try:
         res: QueryResult = pipeline.answer_query(
@@ -131,11 +166,11 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 1. Retrieved Context Table
         if res.retrieved_chunks:
-            ret_table = Table(title="Retrieved Context Chunks (ChromaDB)", border_style="cyan")
+            ret_table = Table(title="Retrieved Context Chunks (ChromaDB)", border_style=UI_THEME["colors"]["table_accent_border"])
             ret_table.add_column("Rank", justify="center", style="bold")
             ret_table.add_column("Source", style="cyan")
             ret_table.add_column("Page", justify="center")
-            ret_table.add_column("Cosine Dist", justify="right")
+            ret_table.add_column("Distance", justify="right")
             ret_table.add_column("Similarity", justify="right", style="green")
             ret_table.add_column("Snippet Preview", style="dim")
 
@@ -153,11 +188,11 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 2. Inspect Augmented Prompt if requested
         if inspect_prompt:
-            console.print("\n[bold yellow]=== Inspecting Augmented Prompt ===[/bold yellow]")
-            console.print(Panel(res.prompt.full_prompt_text, title="Augmented Prompt", border_style="yellow"))
+            console.print(f"\n[{UI_THEME['colors']['warning_border']}]=== Inspecting Augmented Prompt ===[/{UI_THEME['colors']['warning_border']}]")
+            console.print(Panel(res.prompt.full_prompt_text, title="Augmented Prompt", border_style=UI_THEME["colors"]["warning_border"]))
 
         # 3. Grounded Answer Panel
-        ans_color = "yellow" if res.is_refusal else "green"
+        ans_color = UI_THEME["colors"]["warning_border"] if res.is_refusal else UI_THEME["colors"]["banner_border"]
         ans_title = "Guardrail Refusal (No Grounding Context)" if res.is_refusal else "Grounded Answer"
 
         console.print(f"\n[bold {ans_color}]=== {ans_title} ===[/bold {ans_color}]")
@@ -165,7 +200,7 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 4. Citations
         if res.citations and not res.is_refusal:
-            cit_table = Table(title="Source Citations", border_style="green")
+            cit_table = Table(title="Source Citations", border_style=UI_THEME["colors"]["table_primary_border"])
             cit_table.add_column("Ref", justify="center", style="bold green")
             cit_table.add_column("Document", style="cyan")
             cit_table.add_column("Page", justify="center")
@@ -185,14 +220,14 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
         )
 
     except Exception as err:
-        console.print(f"\n[bold red]Query Failed:[/bold red] {err}")
+        console.print(f"\n[{UI_THEME['colors']['error_color']}]Query Failed:[/{UI_THEME['colors']['error_color']}] {err}")
 
 
 def handle_status(pipeline: RAGPipeline):
     """Display vector store statistics and indexed documents."""
     stats = pipeline.vector_store.get_collection_stats()
 
-    table = Table(title="Vector Database Status (ChromaDB)", border_style="green")
+    table = Table(title="Vector Database Status (ChromaDB)", border_style=UI_THEME["colors"]["table_primary_border"])
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="bold white")
     table.add_row("Collection Name", stats["collection_name"])
@@ -202,7 +237,7 @@ def handle_status(pipeline: RAGPipeline):
     console.print(table)
 
     if stats["documents"]:
-        doc_table = Table(title="Indexed Documents", border_style="cyan")
+        doc_table = Table(title="Indexed Documents", border_style=UI_THEME["colors"]["table_accent_border"])
         doc_table.add_column("Filename", style="bold white")
         doc_table.add_column("Type", style="cyan")
         doc_table.add_column("Chunks", justify="center")
@@ -224,12 +259,12 @@ def handle_status(pipeline: RAGPipeline):
 
 def handle_evaluate(pipeline: RAGPipeline):
     """Run the 8-10 benchmark test cases and display formatted results."""
-    console.print("\n[bold green]=== Running Automated RAG Evaluation Benchmark ===[/bold green]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Running Automated RAG Evaluation Benchmark ===[/{UI_THEME['colors']['success_color']}]")
     evaluator = RAGEvaluator(pipeline)
     report = evaluator.run_benchmark()
 
     # Results Table
-    table = Table(title="Benchmark Test Case Results", border_style="green")
+    table = Table(title="Benchmark Test Case Results", border_style=UI_THEME["colors"]["table_primary_border"])
     table.add_column("ID", style="bold")
     table.add_column("Category", style="cyan")
     table.add_column("Question Preview", style="white")
@@ -239,10 +274,13 @@ def handle_evaluate(pipeline: RAGPipeline):
     table.add_column("Status", justify="center", style="bold")
     table.add_column("Latency", justify="right")
 
+    pass_icon = UI_THEME["icons"]["test_passed"]
+    fail_icon = UI_THEME["icons"]["test_failed"]
+
     for r in report.results:
-        ret_icon = "✅" if r.retrieval_passed else "❌"
-        grd_icon = "✅" if r.grounding_passed else "❌"
-        ref_icon = "✅" if r.refusal_passed else "❌"
+        ret_icon = pass_icon if r.retrieval_passed else fail_icon
+        grd_icon = pass_icon if r.grounding_passed else fail_icon
+        ref_icon = pass_icon if r.refusal_passed else fail_icon
         status_text = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
 
         table.add_row(
@@ -261,31 +299,34 @@ def handle_evaluate(pipeline: RAGPipeline):
     # Summary Metrics Panel
     summary_text = Text()
     summary_text.append(f"Total Tests: {report.total_tests}  |  ", style="bold")
-    summary_text.append(f"Passed: {report.passed_tests}  |  ", style="bold green")
-    summary_text.append(f"Failed: {report.failed_tests}  |  ", style="bold red" if report.failed_tests > 0 else "bold green")
-    summary_text.append(f"Pass Rate: {report.pass_rate_pct:.1f}%\n", style="bold cyan")
+    summary_text.append(f"Passed: {report.passed_tests}  |  ", style=UI_THEME["colors"]["success_color"])
+    summary_text.append(f"Failed: {report.failed_tests}  |  ", style=UI_THEME["colors"]["error_color"] if report.failed_tests > 0 else UI_THEME["colors"]["success_color"])
+    summary_text.append(f"Pass Rate: {report.pass_rate_pct:.1f}%\n", style=UI_THEME["colors"]["info_color"])
     summary_text.append(f"Retrieval Accuracy: {report.retrieval_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Grounding Accuracy: {report.grounding_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Refusal Accuracy: {report.refusal_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Avg Latency: {report.avg_latency_ms:.1f}ms", style="white")
 
-    console.print(Panel(summary_text, title="Evaluation Benchmark Summary", border_style="green"))
+    console.print(Panel(summary_text, title="Evaluation Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"]))
 
 
 def handle_interactive(pipeline: RAGPipeline):
     """Launch interactive REPL mode for submitting questions."""
     print_banner()
-    console.print("\n[bold cyan]Interactive Doc-QA Shell.[/bold cyan] Type your question, or commands:")
-    console.print("  [dim]• ':status'    - View vector store status[/dim]")
-    console.print("  [dim]• ':eval'      - Run benchmark evaluation[/dim]")
-    console.print("  [dim]• ':samples'   - Ingest sample documents[/dim]")
-    console.print("  [dim]• ':prompt'    - Toggle prompt inspection[/dim]")
-    console.print("  [dim]• ':exit'      - Exit interactive mode[/dim]\n")
+    bullet = UI_THEME["icons"]["bullet"]
+    arrow = UI_THEME["icons"]["prompt_arrow"]
+
+    console.print(f"\n[{UI_THEME['colors']['info_color']}]Interactive Doc-QA Shell.[/{UI_THEME['colors']['info_color']}] Type your question, or commands:")
+    console.print(f"  [dim]{bullet} ':status'    - View vector store status[/dim]")
+    console.print(f"  [dim]{bullet} ':eval'      - Run benchmark evaluation[/dim]")
+    console.print(f"  [dim]{bullet} ':samples'   - Ingest sample documents[/dim]")
+    console.print(f"  [dim]{bullet} ':prompt'    - Toggle prompt inspection[/dim]")
+    console.print(f"  [dim]{bullet} ':exit'      - Exit interactive mode[/dim]\n")
 
     inspect_prompt = False
     while True:
         try:
-            query = console.input("[bold green]doc-qa > [/bold green]").strip()
+            query = console.input(f"[bold green]doc-qa {arrow} [/bold green]").strip()
             if not query:
                 continue
 
@@ -368,7 +409,7 @@ def main():
     elif args.command == "reset":
         print_banner()
         pipeline.vector_store.reset_collection()
-        console.print("[green]Vector database collection reset successfully.[/green]")
+        console.print(f"[{UI_THEME['colors']['success_color']}]Vector database collection reset successfully.[/{UI_THEME['colors']['success_color']}]")
     elif args.command == "interactive" or args.command is None:
         handle_interactive(pipeline)
     else:

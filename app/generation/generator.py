@@ -25,9 +25,7 @@ from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
 from app.config import LLMConfig, config
 from app.logging_config import logger
 
-# ---------------------------------------------------------------------------
 # Asset paths and loaders
-# ---------------------------------------------------------------------------
 _ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 _GENERATION_TEXTS_PATH = _ASSETS_DIR / "configs" / "generation_texts.json"
 _NLP_STOPWORDS_PATH = _ASSETS_DIR / "configs" / "nlp_stopwords.json"
