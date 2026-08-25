@@ -60,7 +60,7 @@ class VectorStore:
             self._collection = self._client.get_or_create_collection(
                 name=self.collection_name,
                 embedding_function=self.embedding_manager.get_embedding_function(),
-                metadata={"hnsw:space": "cosine"},
+                metadata={"hnsw:space": self.embedding_manager.distance_metric},
             )
             logger.info("ChromaDB initialized. Current chunk count: %d", self._collection.count())
         except Exception as err:
@@ -118,12 +118,15 @@ class VectorStore:
                 for chunk in chunks
             ]
 
-            logger.info("Persisting %d chunks into collection '%s'...", len(chunks), self.collection_name)
-            self._collection.add(
-                ids=ids,
-                documents=documents,
-                metadatas=metadatas,
-            )
+            batch_size = getattr(config.storage, 'batch_size', 1000)
+            logger.info("Persisting %d chunks into collection '%s' in batches of %d...", len(chunks), self.collection_name, batch_size)
+            
+            for i in range(0, len(ids), batch_size):
+                self._collection.add(
+                    ids=ids[i:i + batch_size],
+                    documents=documents[i:i + batch_size],
+                    metadatas=metadatas[i:i + batch_size],
+                )
             logger.info(
                 "Successfully persisted %d chunks for '%s'. Total collection chunks now: %d",
                 len(chunks),
@@ -180,9 +183,8 @@ class VectorStore:
             for rank, (chunk_id, doc_text, meta, distance) in enumerate(
                 zip(ids, docs, metas, distances), start=1
             ):
-                # For cosine distance: distance is in [0, 2], similarity is 1 - (distance / 2) or 1 - distance
-                # Cosine distance = 1 - cosine_similarity. So cosine_similarity = 1 - distance
-                similarity_score = max(0.0, 1.0 - float(distance))
+                # Metric-agnostic similarity conversion
+                similarity_score = self.embedding_manager.distance_to_similarity(float(distance))
 
                 formatted_results.append({
                     "rank": rank,
@@ -300,7 +302,7 @@ class VectorStore:
             self._collection = self._client.get_or_create_collection(
                 name=self.collection_name,
                 embedding_function=self.embedding_manager.get_embedding_function(),
-                metadata={"hnsw:space": "cosine"},
+                metadata={"hnsw:space": self.embedding_manager.distance_metric},
             )
             logger.info("Collection '%s' reset successfully.", self.collection_name)
         except Exception as err:
