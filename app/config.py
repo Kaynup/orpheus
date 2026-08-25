@@ -46,6 +46,9 @@ class LLMConfig:
     openrouter_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     ollama_api_base: Optional[str] = "http://localhost:11434"
+    suppress_debug_info: bool = True
+    offline_topic_threshold: float = 0.4
+    offline_max_sentences: int = 4
 
 
 @dataclass
@@ -114,6 +117,9 @@ class AppConfig:
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
         ollama_base = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
+        llm_suppress_debug = os.getenv("LLM_DEBUG_INFO", "false").lower() not in ("true", "1")
+        llm_offline_topic_threshold = float(os.getenv("LLM_OFFLINE_TOPIC_THRESHOLD", "0.4"))
+        llm_offline_max_sentences = int(os.getenv("LLM_OFFLINE_MAX_SENTENCES", "4"))
 
         # Storage Settings
         chroma_persist_dir = os.getenv("CHROMA_PERSIST_DIR", str(BASE_DIR / "data" / "chroma_db"))
@@ -154,6 +160,9 @@ class AppConfig:
                 openrouter_api_key=openrouter_key,
                 openai_api_key=openai_key,
                 ollama_api_base=ollama_base,
+                suppress_debug_info=llm_suppress_debug,
+                offline_topic_threshold=llm_offline_topic_threshold,
+                offline_max_sentences=llm_offline_max_sentences,
             ),
             storage=StorageConfig(
                 persist_dir=chroma_persist_dir,

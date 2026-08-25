@@ -1,0 +1,11 @@
+{
+  "standard_refusal": "I do not have sufficient information in the provided documents to answer this question.",
+  "fallback_provider_note": "\n\n*(Note: Live provider call failed with: {error}. Displayed answer generated via grounded offline fallback.)*",
+  "refusal_signatures": [
+    "i do not have sufficient information",
+    "insufficient information",
+    "not provided in the context",
+    "not mentioned in the provided documents",
+    "cannot find any information"
+  ]
+}

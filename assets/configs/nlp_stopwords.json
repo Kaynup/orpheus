@@ -1,0 +1,17 @@
+{
+  "stopwords": [
+    "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
+    "the", "and", "is", "are", "was", "were", "be", "been", "being", "have",
+    "has", "had", "do", "does", "did", "for", "with", "about", "against",
+    "between", "into", "through", "during", "before", "after", "above", "below",
+    "from", "up", "down", "in", "out", "on", "off", "over", "under", "again",
+    "further", "then", "once", "here", "there", "all", "any", "both", "each",
+    "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only",
+    "own", "same", "so", "than", "too", "very", "can", "will", "just", "should",
+    "now", "tell", "explain", "describe", "give", "list", "much", "many"
+  ],
+  "anchor_terms": [
+    "acme", "corporation", "corp", "policy", "guidelines", "handbook",
+    "system", "document", "company"
+  ]
+}

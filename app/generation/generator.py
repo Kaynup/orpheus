@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional
 
 import typing
@@ -23,8 +25,33 @@ from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
 from app.config import LLMConfig, config
 from app.logging_config import logger
 
-# Suppress overly verbose litellm telemetry in learning environment
-litellm.suppress_debug_info = True
+# ---------------------------------------------------------------------------
+# Asset paths and loaders
+# ---------------------------------------------------------------------------
+_ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+_GENERATION_TEXTS_PATH = _ASSETS_DIR / "configs" / "generation_texts.json"
+_NLP_STOPWORDS_PATH = _ASSETS_DIR / "configs" / "nlp_stopwords.json"
+
+
+def _load_json_asset(path: Path) -> Dict[str, Any]:
+    """Read and parse a JSON configuration asset file with fail-fast error handling."""
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Configuration asset file not found: {path}. "
+            "Ensure the assets/configs/ directory is present and contains required JSON assets."
+        )
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+_GEN_TEXTS = _load_json_asset(_GENERATION_TEXTS_PATH)
+_NLP_DATA = _load_json_asset(_NLP_STOPWORDS_PATH)
+
+DEFAULT_REFUSAL_TEXT: str = _GEN_TEXTS["standard_refusal"]
+FALLBACK_PROVIDER_NOTE_TEMPLATE: str = _GEN_TEXTS["fallback_provider_note"]
+REFUSAL_SIGNATURES: List[str] = _GEN_TEXTS["refusal_signatures"]
+STOPWORDS: set[str] = set(_NLP_DATA["stopwords"])
+ANCHOR_TERMS: set[str] = set(_NLP_DATA["anchor_terms"])
 
 
 class GenerationError(Exception):
@@ -68,6 +95,8 @@ class LLMGenerator:
 
     def __init__(self, llm_config: Optional[LLMConfig] = None):
         self.config = llm_config or config.llm
+        # Configure litellm telemetry dynamically based on config
+        litellm.suppress_debug_info = getattr(self.config, "suppress_debug_info", True)
         self._setup_api_keys()
 
     def _setup_api_keys(self) -> None:
@@ -112,7 +141,7 @@ class LLMGenerator:
         """
         logger.info("Executing generation in offline/mock mode...")
         elapsed_ms = (time.perf_counter() - start_time) * 1000
-        refusal_text = "I do not have sufficient information in the provided documents to answer this question."
+        refusal_text = DEFAULT_REFUSAL_TEXT
 
         if not prompt.citations_map or prompt.formatted_context == "[NO RELEVANT CONTEXT FOUND]":
             return GenerationResult(
@@ -128,19 +157,8 @@ class LLMGenerator:
             )
 
         # Extract meaningful query keywords (words >= 3 chars, excluding common stop words)
-        stopwords = {
-            "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
-            "the", "and", "is", "are", "was", "were", "be", "been", "being", "have",
-            "has", "had", "do", "does", "did", "for", "with", "about", "against",
-            "between", "into", "through", "during", "before", "after", "above", "below",
-            "from", "up", "down", "in", "out", "on", "off", "over", "under", "again",
-            "further", "then", "once", "here", "there", "all", "any", "both", "each",
-            "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only",
-            "own", "same", "so", "than", "too", "very", "can", "will", "just", "should",
-            "now", "tell", "explain", "describe", "give", "list", "does", "much", "many",
-        }
-        # Generic anchor terms that appear everywhere but don't define the topic
-        anchor_terms = {"acme", "corporation", "corp", "policy", "guidelines", "handbook", "system", "document", "company"}
+        stopwords = STOPWORDS
+        anchor_terms = ANCHOR_TERMS
 
         raw_query_words = [
             w.lower().strip("?,!.:;\"'()")
@@ -154,8 +172,9 @@ class LLMGenerator:
         all_context_lower = prompt.formatted_context.lower()
         if topic_words:
             matched_topic_words = [tw for tw in topic_words if tw in all_context_lower]
-            # If less than 40% of topic words exist in context (e.g. interstellar, space, stock, price), refuse
-            if len(matched_topic_words) < max(1, len(topic_words) * 0.4):
+            threshold = getattr(self.config, "offline_topic_threshold", 0.4)
+            # If less than configured threshold of topic words exist in context, refuse
+            if len(matched_topic_words) < max(1, len(topic_words) * threshold):
                 return GenerationResult(
                     answer=refusal_text,
                     model="offline-grounded-fallback",
@@ -196,8 +215,9 @@ class LLMGenerator:
                 is_offline_mode=True,
             )
 
-        # Build grounded response from matched sentences (up to 3 best sentences)
-        answer = " ".join(matched_sentences[:4])
+        # Build grounded response from matched sentences up to configured sentence limit
+        max_sentences = getattr(self.config, "offline_max_sentences", 4)
+        answer = " ".join(matched_sentences[:max_sentences])
 
         return GenerationResult(
             answer=answer,
@@ -272,13 +292,7 @@ class LLMGenerator:
             total_tokens = usage.total_tokens if usage else prompt_tokens + completion_tokens
 
             # Detect refusal pattern
-            refusal_signatures = [
-                "i do not have sufficient information",
-                "insufficient information",
-                "not provided in the context",
-                "not mentioned in the provided documents",
-                "cannot find any information",
-            ]
+            refusal_signatures = REFUSAL_SIGNATURES
             is_refusal = any(sig in answer_text.lower() for sig in refusal_signatures)
 
             # Match which sources were cited
@@ -313,7 +327,7 @@ class LLMGenerator:
             # Fall back to offline grounded generator rather than crashing
             logger.warning("Falling back to local grounded generator due to provider exception.")
             fallback_res = self._generate_offline_response(prompt, start_time)
-            fallback_res.answer += f"\n\n*(Note: Live provider call failed with: {err}. Displayed answer generated via grounded offline fallback.)*"
+            fallback_res.answer += FALLBACK_PROVIDER_NOTE_TEMPLATE.format(error=str(err))
             return fallback_res
 
     def stream_generate(

@@ -421,6 +421,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/feat/versioned-prompts` (Covers `FEAT-PROMPT-01`)
   * **Commit:** `feat(augmentation): extract system prompts and query templates to versioned asset files`
 * `v0.2/refactor/generation-module` (Covers `FIX-GEN-01`, `REFACTOR-GEN-02`, `REFACTOR-GEN-03`, `FIX-GEN-04`, `FIX-GEN-05`)
+  * **Commit:** `refactor(generation): externalize refusal texts and NLP assets and make offline limits config-driven`
 * `v0.2/refactor/cli-theme` (Covers `REFACTOR-CLI-01`)
 
 ### Step 3 Branches (Web Interface & API)
