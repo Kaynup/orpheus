@@ -24,7 +24,7 @@ eval:
 	$(PYTHON) cli.py evaluate
 
 test:
-	$(PYTHON) -m pytest tests/ -v
+	$(PYTHON) -m pytest -v
 
 clean:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__ .pytest_cache/

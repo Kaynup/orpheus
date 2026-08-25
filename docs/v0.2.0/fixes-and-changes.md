@@ -439,10 +439,13 @@ Each branch is committed with a **single, small, one-line commit message** at th
 
 ### Step 4 Branches (Testing & Evaluation)
 * `v0.2/refactor/test-architecture` (Covers `REFACTOR-TEST-01`, `FEAT-TEST-02`)
+  * **Commit:** `refactor(tests): collocate unit tests with source modules and add frontend security suite`
 * `v0.2/feat/robust-eval-benchmarks` (Covers `FEAT-EVAL-01`)
 * `v0.2/doc/sample-documents-enrichment` (Covers `DOC-EVAL-02`)
 
 ### Final Phase Branches (Test Coverage & Documentation)
+> Adhering to the CHANGELOG these branches have to write or modify corresponding tests properly:
+
 * `v0.2/test/ingestion-and-storage` (Unit tests for new Parser Registry, Config-driven limits, and dynamic Vector Store metadata)
 * `v0.2/test/retrieval-and-generation` (Unit tests for dynamic prompt assets, NLP stopwords logic, and tunable LLM configurations)
 * `v0.2/test/api-and-security` (Integration/Security tests verifying strict Flask-CORS origin rules and Decoupled Pipeline factories)
