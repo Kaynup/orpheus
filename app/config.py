@@ -59,6 +59,8 @@ class StorageConfig:
     allowed_extensions: List[str] = field(default_factory=lambda: [".txt", ".pdf"])
     max_file_size_bytes: int = 10 * 1024 * 1024  # 10 MB
     hash_buffer_size: int = 65536  # 64 KB read chunks for SHA-256
+    distance_metric: str = "cosine"
+    batch_size: int = 1000
 
 
 @dataclass
@@ -113,8 +115,11 @@ class AppConfig:
         openai_key = os.getenv("OPENAI_API_KEY")
         ollama_base = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 
-        persist_dir = os.getenv("CHROMA_PERSIST_DIR", str(BASE_DIR / "data" / "chroma_db"))
-        collection_name = os.getenv("CHROMA_COLLECTION_NAME", "doc_qa_collection")
+        # Storage Settings
+        chroma_persist_dir = os.getenv("CHROMA_PERSIST_DIR", str(BASE_DIR / "data" / "chroma_db"))
+        chroma_collection_name = os.getenv("CHROMA_COLLECTION_NAME", "doc_qa_collection")
+        chroma_distance_metric = os.getenv("CHROMA_DISTANCE_METRIC", "cosine").lower()
+        chroma_batch_size = int(os.getenv("CHROMA_BATCH_SIZE", "1000"))
         upload_dir = os.getenv("UPLOAD_DIR", str(BASE_DIR / "data" / "uploads"))
 
         # Ingestion limits
@@ -151,12 +156,14 @@ class AppConfig:
                 ollama_api_base=ollama_base,
             ),
             storage=StorageConfig(
-                persist_dir=persist_dir,
-                collection_name=collection_name,
+                persist_dir=chroma_persist_dir,
+                collection_name=chroma_collection_name,
                 upload_dir=upload_dir,
                 allowed_extensions=allowed_extensions,
                 max_file_size_bytes=max_file_size_bytes,
                 hash_buffer_size=hash_buffer_size,
+                distance_metric=chroma_distance_metric,
+                batch_size=chroma_batch_size,
             ),
             server=ServerConfig(
                 host=server_host,

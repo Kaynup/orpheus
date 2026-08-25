@@ -413,6 +413,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/refactor/vector-store` (Covers `FIX-STORE-01`, `REFACTOR-STORE-02`, `REFACTOR-STORE-03`)
   * **Commit:** `refactor(storage): make similarity calculation metric-agnostic and implement safe chunk batching`
 * `v0.2/feat/storage-config` (Covers `FEAT-CONFIG-01`)
+  * **Commit:** `feat(config): add distance metric and batch size variables to storage config`
 
 ### Step 2 Branches (Retrieval, Generation & CLI)
 * `v0.2/refactor/retrieval-module` (Covers `REFACTOR-RETRIEVAL-01`)
