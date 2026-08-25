@@ -429,6 +429,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/feat/flask-cors` (Covers `FEAT-API-01`)
   * **Commit:** `feat(api): add Flask-CORS with strict localhost origin whitelist`
 * `v0.2/refactor/frontend-js-modules` (Covers `REFACTOR-UI-01`)
+  * **Commit:** `refactor(ui): deconstruct monolithic app.js into hierarchical ES6 modules`
 * `v0.2/refactor/frontend-templates` (Covers `REFACTOR-UI-02`)
 * `v0.2/refactor/frontend-css` (Covers `REFACTOR-UI-03`)
 * `v0.2/refactor/api-pipeline-singleton` (Covers `REFACTOR-API-02`)
