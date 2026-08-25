@@ -38,3 +38,36 @@ Fixed
 * Fixed rigid file size validation and extension restrictions across document ingestion.
 * Eliminated magic number (64 KB) in ``compute_file_checksum()``.
 * Eliminated hardcoded cosine distance assumptions in vector retrieval scoring and distance calculation comments.
+
+
+Retrieval, Generation & CLI
+===========================
+
+Added
+-----
+* **Versioned Prompt Asset Architecture** (``assets/prompts/``, ``app/augmentation/prompt_builder.py``):
+  Extracted system instructions and user query prompt templates into independent versioned text files (``assets/prompts/system-prompts/v1_system_instruction_001.txt`` and ``assets/prompts/full-prompt-templates/v1_user_query_template_001.txt``), dynamically loaded with fail-fast validation via ``_load_asset()``.
+* **Externalized NLP & Generation Config Assets** (``assets/configs/``, ``app/generation/generator.py``):
+  - ``assets/configs/generation_texts.json``: Externalized standard refusal messaging, refusal detection signatures, and provider fallback note templates.
+  - ``assets/configs/nlp_stopwords.json``: Externalized NLP stop words and generic domain anchor terms.
+* **Centralized CLI Theme & Glyphs** (``assets/configs/cli_theme.json``, ``cli.py``):
+  Externalized all CLI terminal styling tokens, status icons (``⏳``, ``⚡``, ``✔``, ``✖``), benchmark test glyphs, and prompt arrows into a centralized theme configuration.
+* **Generation & Debugging Configuration Settings** (``app/config.py``, ``.env.example``):
+  Added environment settings for:
+  - ``LLM_DEBUG_INFO``: Toggle verbose LiteLLM telemetry and debugging info dynamically.
+  - ``LLM_OFFLINE_TOPIC_THRESHOLD``: Configurable relevance ratio for offline topic matching (default 0.4).
+  - ``LLM_OFFLINE_MAX_SENTENCES``: Configurable response sentence limit for offline generation (default 4).
+
+Changed / Refactored
+--------------------
+* **Metric-Agnostic Retrieval Comments** (``app/retrieval/retriever.py``):
+  Removed hardcoded cosine metric assumptions in proximity threshold comments.
+* **Decoupled LLM Generator Orchestration** (``app/generation/generator.py``):
+  Refactored ``LLMGenerator`` to dynamically consume externalized refusal strings, NLP stop words, and configurable offline thresholds.
+* **Unified CLI Theme Architecture** (``cli.py``):
+  Refactored event listeners, banners, tables, and interactive prompt handlers to consume tokens from the unified ``UI_THEME`` asset.
+
+Fixed
+-----
+* Fixed hardcoded telemetry suppression in LiteLLM orchestration (``FIX-GEN-01``).
+* Fixed hardcoded offline topic threshold and sentence length limits in fallback response generator (``FIX-GEN-04``, ``FIX-GEN-05``).
