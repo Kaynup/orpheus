@@ -1,0 +1,66 @@
+<!-- TAB 3: Evaluation Benchmark -->
+<section id="tab-eval" class="tab-pane">
+    <div class="eval-layout">
+        <div class="eval-header-card">
+            <div>
+                <h2>10-Question RAG Evaluation Benchmark</h2>
+                <p>Automated verification testing retrieval accuracy, grounding faithfulness, citation
+                    presence, and out-of-scope hallucination guardrails.</p>
+            </div>
+            <button id="btn-run-eval" class="btn btn-primary">
+                Run Full Benchmark
+            </button>
+        </div>
+
+        <!-- Aggregate Summary Cards -->
+        <div class="eval-summary-grid" id="eval-summary-grid" style="display: none;">
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Overall Pass Rate</span>
+                <span class="eval-stat-val" id="eval-stat-pass-rate">0%</span>
+            </div>
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Retrieval Accuracy</span>
+                <span class="eval-stat-val" id="eval-stat-retrieval">0%</span>
+            </div>
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Grounding Accuracy</span>
+                <span class="eval-stat-val" id="eval-stat-grounding">0%</span>
+            </div>
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Refusal / Guardrail Accuracy</span>
+                <span class="eval-stat-val" id="eval-stat-refusal">0%</span>
+            </div>
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Average Latency</span>
+                <span class="eval-stat-val" id="eval-stat-latency">0 ms</span>
+            </div>
+        </div>
+
+        <!-- Benchmark Test Cases Table -->
+        <div class="panel-card mt-4">
+            <h3>Test Case Diagnostic Results</h3>
+            <div class="table-responsive">
+                <table class="data-table" id="eval-results-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Category</th>
+                            <th>Question</th>
+                            <th>Retrieval</th>
+                            <th>Grounding</th>
+                            <th>Refusal</th>
+                            <th>Status</th>
+                            <th>Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eval-table-body">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Click 'Run Full Benchmark' to
+                                execute the 10 test cases.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

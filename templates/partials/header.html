@@ -1,0 +1,43 @@
+<!-- Top Navigation Header -->
+<header class="app-header">
+    <div class="header-brand">
+        <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+        </div>
+        <div>
+            <h1 class="brand-title">Doc-QA Assistant <span class="version-badge" id="app-version-badge">v{{ version }}</span></h1>
+            <p class="brand-subtitle">Transparent GenAI Pipeline • Persistent ChromaDB • LiteLLM Orchestration
+            </p>
+        </div>
+    </div>
+
+    <div class="header-actions">
+        <div class="status-indicator">
+            <span class="pulse-dot"></span>
+            <span id="db-status-text">ChromaDB Ready (0 chunks)</span>
+        </div>
+        <button id="btn-load-samples" class="btn btn-secondary btn-sm" title="Ingest built-in sample documents">
+            Load Samples
+        </button>
+        <button id="btn-reset-db" class="btn btn-outline-danger btn-sm" title="Clear vector database">
+            Reset DB
+        </button>
+    </div>
+</header>
+
+<!-- Navigation Tabs -->
+<nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat">
+        RAG Chat & Inspector
+    </button>
+    <button class="nav-tab" data-tab="tab-ingest" id="tab-btn-ingest">
+        Document Ingestion (<span id="tab-doc-count">0</span>)
+    </button>
+    <button class="nav-tab" data-tab="tab-eval" id="tab-btn-eval">
+        Evaluation Benchmark
+    </button>
+</nav>

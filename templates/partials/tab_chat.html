@@ -1,0 +1,155 @@
+<!-- TAB 1: RAG Chat & Live Pipeline Inspector -->
+<section id="tab-chat" class="tab-pane active">
+    <div class="chat-layout">
+        <!-- Left: Chat conversation stream -->
+        <div class="chat-main-panel">
+            <!-- Quick Question Suggestion Chips -->
+            <div class="suggestions-container">
+                <span class="suggestions-label">Try asking:</span>
+                <div class="suggestion-chips">
+                    <button class="chip"
+                        data-query="What are the core collaboration hours at Acme Corporation?">Core
+                        Hours</button>
+                    <button class="chip"
+                        data-query="How much is the remote office equipment stipend and what days are in-office?">Remote
+                        Stipend</button>
+                    <button class="chip"
+                        data-query="What is the monthly downtime limit for the 99.99% cloud SLA?">Cloud SLA
+                        Limit</button>
+                    <button class="chip"
+                        data-query="What is Acme's policy regarding interstellar space travel reimbursement?">Space
+                        Policy (Guardrail Test)</button>
+                </div>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div id="chat-messages" class="chat-messages-area">
+                <div class="chat-message bot-message intro-message">
+                    <div class="message-header">
+                        <span class="message-sender">Doc-QA Assistant</span>
+                        <span class="message-time">Ready</span>
+                    </div>
+                    <div class="message-body">
+                        Welcome! I am your <strong>Doc-QA Assistant</strong>. I answer questions grounded
+                        strictly in your ingested documents, cite exact sources, and execute
+                        anti-hallucination guardrails if facts are missing.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input Box -->
+            <form id="chat-form" class="chat-input-form">
+                <div class="input-wrapper">
+                    <input type="text" id="chat-input"
+                        placeholder="Ask a question about your indexed documents..." autocomplete="off"
+                        required>
+                    <button type="submit" id="chat-submit-btn" class="btn btn-primary">
+                        <span>Ask</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                </div>
+                <div class="chat-controls-row">
+                    <div class="control-group">
+                        <label for="chat-top-k">Top-K Chunks:</label>
+                        <select id="chat-top-k">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="chat-model-select">Model Orchestration:</label>
+                        <select id="chat-model-select">
+                            <option value="gemini/gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="openrouter/google/gemini-flash-1.5">OpenRouter / Gemini Flash</option>
+                            <option value="openrouter/meta-llama/llama-3.1-8b-instruct">OpenRouter / Llama 3.1 8B</option>
+                            <option value="ollama/gemma3:1b">Ollama / Gemma 3 1B (Local)</option>
+                            <option value="ollama/llama3">Ollama / Llama 3 (Local)</option>
+                            <option value="offline" selected>Offline Grounded Extractor (No API Key Required)</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right: Live Pipeline Observability Inspector -->
+        <div class="chat-inspector-panel">
+            <div class="inspector-header">
+                <h3>Live Pipeline Inspector</h3>
+                <span class="live-tag">Truthful Backend Sync</span>
+            </div>
+            <p class="inspector-desc">Observe real-time state transitions as your query moves through the
+                RAG pipeline.</p>
+
+            <!-- Vertical Process Stepper for QA -->
+            <div class="pipeline-stepper" id="qa-stepper">
+                <div class="step-item" id="step-query-received">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Query Received</div>
+                        <div class="step-details">Waiting for user query...</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step-query-embedded">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Query Embedded</div>
+                        <div class="step-details">Vector embedding (384-d)</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step-retrieving-chunks">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Vector Retrieval</div>
+                        <div class="step-details">ChromaDB cosine nearest neighbor search</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step-context-selected">
+                    <div class="step-icon">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Context Selected</div>
+                        <div class="step-details">Threshold & relevance confidence check</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step-prompt-prepared">
+                    <div class="step-icon">5</div>
+                    <div class="step-content">
+                        <div class="step-title">Prompt Augmented</div>
+                        <div class="step-details">Numbered sources & guardrail instructions</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step-generating-answer">
+                    <div class="step-icon">6</div>
+                    <div class="step-content">
+                        <div class="step-title">LLM Generation</div>
+                        <div class="step-details">LiteLLM grounded synthesis</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Query Metrics Summary -->
+            <div class="inspector-metrics" id="inspector-metrics" style="display: none;">
+                <h4>Execution Diagnostics</h4>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Latency</span>
+                        <span class="metric-val" id="metric-latency">0 ms</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Retrieved Chunks</span>
+                        <span class="metric-val" id="metric-chunks">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Top Similarity</span>
+                        <span class="metric-val" id="metric-sim">0.000</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Tokens</span>
+                        <span class="metric-val" id="metric-tokens">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
