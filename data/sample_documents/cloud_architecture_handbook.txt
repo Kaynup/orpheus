@@ -1,24 +1,28 @@
-# CLOUD ARCHITECTURE & SYSTEM RESILIENCE HANDBOOK
+CLOUD ARCHITECTURE HANDBOOK: DEVOPS AND SYSTEM RESILIENCY
+=========================================================
 
-## 1. High Availability and SLA Guarantees
-Our production cloud platform targets a 99.99% ("four nines") service level availability, permitting no more than 4.38 minutes of unscheduled downtime per month. 
-All core stateless services must be deployed across a minimum of three distinct Availability Zones (AZs) with auto-scaling groups configured between 3 and 30 instances.
+1. OVERVIEW
+This handbook serves as the foundational architecture guide for deploying scalable, distributed microservices within our cloud infrastructure. By adhering to these patterns, engineering teams ensure high availability, fault tolerance, and predictable performance.
 
-## 2. Distributed Caching Architecture
-To reduce load on primary relational databases, read-heavy workloads utilize Redis Cluster in a multi-node master-replica topology.
-Key caching strategies:
-- Cache-Aside (Lazy Loading): The application queries the cache first. If a cache miss occurs, data is fetched from PostgreSQL and written to Redis with an explicit Time-To-Live (TTL).
-- Default TTL: 15 minutes for user session data, 1 hour for product catalog queries, and 24 hours for static configuration data.
-- Cache Eviction: Redis is configured with volatile-lru (Least Recently Used with expiry).
+2. SERVICE LEVEL AGREEMENTS (SLA)
+We guarantee rigorous uptime standards for all tier-1 production services. Our foundational SLA is a 99.99% availability target. Mathematically, a 99.99% SLA permits a maximum of only 4.38 minutes of downtime per month. Achieving this requires automated failover mechanisms, redundant availability zones, and proactive traffic management to mitigate outages before they impact the end user.
 
-## 3. Resilience and Circuit Breakers
-To prevent cascading failures across microservices, inter-service HTTP/gRPC calls must use resilience mechanisms:
-- Circuit Breaker Configuration: Trips open if 50% of requests fail within a 10-second rolling window (minimum 20 requests).
-- Half-Open State: After a 30-second cooldown period, 5 probe requests are permitted to test downstream recovery.
-- Timeouts: Strict 2000ms deadline on inter-service RPCs with exponential backoff retry (maximum 3 attempts with jitter).
+3. CACHING STRATEGIES
+To minimize latency and reduce load on our primary relational databases, we employ a distributed Redis caching layer. Proper cache invalidation and Time-To-Live (TTL) management are crucial to balancing data freshness with performance.
 
-## 4. Deployment Strategies
-Production deployments use Canary releases:
-1. Canary Stage: 5% of production traffic is routed to the new version for 15 minutes while monitoring error rates, p99 latency, and CPU spikes.
-2. Progressive Rollout: Traffic increases to 25%, 50%, and finally 100% over a 1-hour window.
-3. Automated Rollback: If error rates exceed 0.5% or p99 latency increases by more than 20%, an automated rollback is triggered immediately.
+3.1 Caching Configuration
+- Session Data: User sessions and transient authentication tokens are highly dynamic. Therefore, the default caching TTL for session data is set to 15 minutes.
+- Static Assets and Configuration: Application metadata, feature flags, and localized string dictionaries rarely change. The caching TTL for static configuration is set to 24 hours.
+All services must use the centralized Redis cluster and implement Cache-Aside patterns to populate missing data automatically upon cache misses.
+
+4. RESILIENCY PATTERNS
+Distributed systems are subject to transient network failures, latency spikes, and downstream service degradation. We mandate the implementation of standard resiliency patterns across all inter-service communications using our Envoy sidecar proxies.
+
+4.1 Retry and Backoff
+All idempotent HTTP/gRPC requests must implement an exponential backoff retry policy. The default configuration allows up to 3 retries with a base delay of 200ms and a jitter of 50%.
+
+4.2 Circuit Breaker Pattern
+To prevent cascading failures when a downstream dependency is unhealthy, all outgoing requests must be routed through a circuit breaker. The circuit breaker monitors the error rate over a sliding window of 60 seconds. The circuit breaker trigger condition is a 50% failure rate threshold. If 50% or more of requests fail within the window, the circuit trips (opens), immediately failing subsequent requests and returning a fallback response to allow the downstream service time to recover. The circuit transitions to a half-open state after a 30-second cooling period to test service recovery.
+
+5. OBSERVABILITY
+Every service must integrate with our OpenTelemetry pipeline. Logs, traces, and metrics (including P90 and P99 latencies, error rates, and cache hit ratios) must be aggregated in the central observability dashboard.

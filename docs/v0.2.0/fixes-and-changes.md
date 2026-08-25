@@ -443,6 +443,7 @@ Each branch is committed with a **single, small, one-line commit message** at th
 * `v0.2/feat/robust-eval-benchmarks` (Covers `FEAT-EVAL-01`)
   * **Commit:** `feat(eval): enhance benchmark robustness with strict character bounds and demanding assertions`
 * `v0.2/doc/sample-documents-enrichment` (Covers `DOC-EVAL-02`)
+  * **Commit:** `doc(eval): enrich sample documents with complex, real-world text for robust benchmark testing`
 
 ### Final Phase Branches (Test Coverage & Documentation)
 > Adhering to the CHANGELOG these branches have to write or modify corresponding tests properly:

@@ -259,7 +259,7 @@ def handle_status(pipeline: RAGPipeline):
 
 def handle_evaluate(pipeline: RAGPipeline):
     """Run the 8-10 benchmark test cases and display formatted results."""
-    console.print(f"\n[{UI_THEME['colors']['success_color']}=== Running Automated RAG Evaluation Benchmark ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Running Automated RAG Evaluation Benchmark ===[/{UI_THEME['colors']['success_color']}]")
     evaluator = RAGEvaluator(pipeline)
     report = evaluator.run_benchmark()
 

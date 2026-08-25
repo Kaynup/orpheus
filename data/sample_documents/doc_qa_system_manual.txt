@@ -1,13 +1,23 @@
-# DOC-QA ASSISTANT - ARCHITECTURAL SPECIFICATION & OPERATIONAL MANUAL
+DOC-QA ASSISTANT: SYSTEM ARCHITECTURE AND RAG MANUAL
+======================================================
 
-## 1. System Overview and Purpose
-Doc-QA Assistant is an intermediate-level Retrieval-Augmented Generation (RAG) system engineered in Python 3.10. Its architectural purpose is to ingest heterogeneous business documents (.txt and .pdf), generate dense mathematical representations (embeddings), persist vectors into ChromaDB, retrieve the most relevant semantic context for a user query, and synthesize grounded answers with explicit source citations.
+1. SYSTEM OVERVIEW
+The Doc-QA Assistant is an enterprise-grade Retrieval-Augmented Generation (RAG) system designed to answer complex user queries by synthesizing grounded facts from proprietary document corpora. The architecture decouples document ingestion, vector retrieval, and Large Language Model (LLM) generation into independent, scalable microservices.
 
-## 2. Ingestion and Provenance Tracking
-Raw documents enter through the Ingestion subsystem. The parser computes a SHA-256 cryptographic checksum and extracts page-by-page text content. Chunking is handled by a recursive text splitter using configurable chunk size (default 500 characters) and overlap (default 50 characters). Every chunk maintains strict provenance: document ID, source filename, page number, character offsets, and estimated token counts.
+2. INGESTION AND CHUNKING PIPELINE
+When a document (TXT, PDF, or Markdown) is uploaded to the system, it is processed through the ingestion pipeline. 
+Because LLMs have strict context window limits and struggle with "lost in the middle" phenomena, documents are not fed whole. Instead, the text is split into semantic chunks. Our text splitter is configured with a default chunk size of 500 characters and an overlap of 50 characters, ensuring that contextual boundaries are preserved without fracturing critical sentences.
 
-## 3. Persistent Vector Storage and Retrieval
-Embeddings are computed using Chroma's all-MiniLM-L6-v2 transformer model into 384-dimensional cosine vector space. Vectors are persisted to disk in the data/chroma_db directory to ensure query capability without re-indexing after server restarts. Retrieval utilizes cosine similarity distance with a configurable top-k parameter (default 3) and a distance confidence threshold (default 0.90).
+3. EMBEDDING AND VECTOR STORE
+Semantic search is powered by transforming the text chunks into high-dimensional vector representations. 
 
-## 4. Grounded Prompt Augmentation and Guardrails
-Retrieved candidate chunks are formatted into numbered source context blocks: [Source N: filename (Page X)]. System instructions mandate that the LLM only answer using factual statements directly present in the context and provide inline citations [Source N]. When the retrieved context lacks sufficient information, the model is strictly bound to execute the anti-hallucination guardrail: "I do not have sufficient information in the provided documents to answer this question."
+3.1 Embedding Model
+The system requires a dense embedding model that balances semantic accuracy with low latency. By default, the Doc-QA Assistant uses the `all-MiniLM-L6-v2` embedding model. This model projects semantic meaning into a 384-dimensional vector space. The combination of the lightweight MiniLM architecture and the 384 vector dimension allows the system to perform blazing-fast cosine similarity calculations across millions of chunks while maintaining robust contextual understanding.
+
+3.2 Vector Database
+The generated embeddings are stored in a persistent ChromaDB collection. Each vector payload includes crucial metadata: the source filename, the chunk index, and the document checksum. This metadata allows the retrieval engine to filter queries by document type and provide accurate source citations to the end user.
+
+4. RETRIEVAL AND GENERATION
+Upon receiving a user query, the query is embedded using the exact same MiniLM model. The vector database performs a Nearest Neighbor (k-NN) search to retrieve the top-k most semantically relevant chunks (default k=3). 
+
+The prompt augmentation layer constructs a secure prompt containing the retrieved context, strict system instructions, and the user's original query. This prompt is dispatched to the configured LLM (e.g., GPT-4, Claude, or a local Llama instance). The LLM is strictly instructed via system prompts to refuse to answer questions if the provided context lacks sufficient information, thereby enforcing hallucination guardrails.
