@@ -144,3 +144,49 @@ Fixed
 -----
 * Eliminated tight coupling of API routes to a singleton pipeline instance (``REFACTOR-API-02``).
 * Fixed monolithic frontend architecture by deconstructing JS, Jinja2 templates, and CSS into domain-driven modular files (``REFACTOR-UI-01``, ``REFACTOR-UI-02``, ``REFACTOR-UI-03``).
+
+
+Testing, Evaluation & Quality Assurance Subsystem
+=================================================
+
+Added
+-----
+* **Collocated Modular Test Architecture** (``app/*/tests/``, ``tests/integration/``, ``pytest.ini``, ``Makefile``):
+  - Transitioned the entire test suite from a centralized root layout to a high-cohesion, collocated architecture within each source package:
+    * ``app/api/tests/test_api_security.py``: API status, empty query validation, invalid uploads, and security header tests.
+    * ``app/chunking/tests/test_chunking.py``: Recursive text splitting, custom separator fallback, overlap boundaries, and token estimation tests.
+    * ``app/evaluation/tests/test_evaluation.py``: Automated scoring, retrieval verification, factual keyword grounding, and refusal guardrail assertions.
+    * ``app/ingestion/tests/test_ingestion.py``: Filename sanitization, non-existent file handling, empty file validation, extension filtering, and TXT parsing tests.
+    * ``app/retrieval/tests/test_retrieval.py``: Vector similarity matching, distance threshold filtering, and empty query guardrails.
+    * ``app/storage/tests/test_vector_store.py``: ChromaDB chunk persistence, HNSW distance querying, collection listing, and deletion tests.
+  - Retained end-to-end multi-stage pipeline lifecycle tests in ``tests/integration/test_pipeline.py``.
+  - Configured ``pytest.ini`` with unified discovery paths (``testpaths = app tests``) and clean root configuration.
+  - Updated ``Makefile`` test target to execute ``python3 -m pytest -v`` across all collocated and integration suites.
+* **Automated Frontend Static Security & DOM Test Suite** (``app/static/js/tests/test_frontend_security.py``):
+  - Built an automated AST/source-scanning unit and security test suite validating all client-side JavaScript components (``app/static/js/**/*.js``).
+  - Enforces zero-tolerance policy for unsafe XSS sinks (``innerHTML``, ``outerHTML``, ``document.write``).
+  - Validates exclusive usage of safe DOM APIs (``textContent``, ``innerText``, ``createElement``, ``setAttribute``).
+  - Guards against dangerous runtime code evaluation patterns (``eval()``, ``Function()`` constructor, string-based ``setTimeout``).
+* **Demanding Evaluation Benchmark & Constraint Logic** (``app/evaluation/test_dataset.py``, ``app/evaluation/evaluator.py``):
+  - Extended ``EvaluationTestCase`` dataclass with strict constraint parameters:
+    * ``max_length: Optional[int]``: Enforces character-length boundaries on model outputs.
+    * ``require_all_keywords: bool``: Requires 100% keyword recall for demanding multi-document synthesis queries.
+  - Upgraded ``BENCHMARK_TEST_SUITE`` queries with tighter topic thresholds, concise character bounds (e.g. <100 chars), and multi-document synthesis assertions.
+  - Embedded length boundary verification and all-keyword grounding assertions into ``RAGEvaluator.evaluate_test_case()``.
+* **Real-World Sample Documents Corpus** (``data/sample_documents/``):
+  - Enriched and expanded all 4 core benchmark files with dense, realistic policies, specifications, and architecture guides:
+    * ``acme_hr_policy.txt``: Comprehensive Employee Handbook with detailed hybrid work rules, core hours, stipend eligibility, and parental leave policies.
+    * ``cloud_architecture_handbook.txt``: In-depth DevOps resilient systems handbook detailing 99.99% SLAs, Redis caching TTLs, exponential backoff, and circuit breaker patterns.
+    * ``renewable_energy_faq.txt``: Technical specification and FAQ covering Mono PERC solar panel efficiency, LiFePO4 battery chemistry, and thermal limits.
+    * ``doc_qa_system_manual.txt``: Full RAG architectural guide detailing ingestion pipelines, MiniLM 384-d embeddings, and ChromaDB vector store mechanics.
+
+Changed / Refactored
+--------------------
+* **Runtime Pydantic 2.13+ LiteLLM Compatibility Shim** (``app/generation/generator.py``):
+  - Introduced automatic schema rebuild and class injection for ``ChatCompletionReasoningSummaryTextBlock`` and ``Message`` to prevent runtime PydanticUserError during LiteLLM completions.
+
+Fixed
+-----
+* **CLI Theme Formatting Syntax** (``cli.py``):
+  - Resolved missing closing brackets in Rich console markup style tags across ingestion banners, headers, and question inspectors.
+
