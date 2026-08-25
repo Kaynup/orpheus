@@ -2,70 +2,89 @@
 v0.2.0 Release Changelog
 =============================
 
-Ingestion & Storage
-===========================
+This changelog provides a comprehensive, detailed architectural record of all features, refactorings, modularizations, and bug fixes introduced across the v0.2.0 development cycle.
+
+
+Ingestion & Storage Subsystem
+=============================
 
 Added
 -----
-* **Parser Strategy Registry Pattern** (``app/ingestion/parser.py``):
-  Introduced ``BaseDocumentParser`` abstract base class, concrete parsers (``TxtParser``, ``PdfParser``), and dictionary-based ``PARSER_REGISTRY`` with ``register_parser`` decorator to allow seamless extension for new document types without modifying core parsing routines (Open-Closed Principle).
-* **Decoupled Token Estimator** (``app/chunking/tokenizer.py``):
-  Created dedicated ``estimate_tokens()`` helper to isolate token counting heuristics from chunking logic, establishing an architectural seam for pluggable tokenizers (e.g., ``tiktoken``, HuggingFace).
-* **Dynamic Storage & Chunking Configurations** (``app/config.py``, ``.env.example``):
-  Added environment settings for:
-  - ``RAG_ALLOWED_EXTENSIONS``: Configurable comma-separated file extension whitelist.
-  - ``RAG_MAX_FILE_SIZE_MB``: Configurable upload file size limit.
-  - ``RAG_HASH_BUFFER_SIZE``: Configurable buffer size for SHA-256 document hashing.
-  - ``RAG_CHUNK_SEPARATORS``: JSON-encoded separator hierarchy for boundary-aware splitting.
-  - ``CHROMA_DISTANCE_METRIC``: Configurable vector space metric (``cosine``, ``l2``, ``ip``).
-  - ``CHROMA_BATCH_SIZE``: Configurable batch insertion threshold to prevent SQLite parameter overflows.
+* **Document Parser Strategy Pattern & Extensible Registry** (``app/ingestion/parser.py``, ``app/ingestion/__init__.py``):
+  - Abstracted document parsing behind ``BaseDocumentParser`` with an abstract ``parse(file_path: Path) -> ParsedDocument`` interface.
+  - Implemented concrete parser strategies:
+    * ``TXTDocumentParser``: Plain text reader with UTF-8 encoding fallback and deterministic UUID5 identification based on file checksum.
+    * ``PDFDocumentParser``: Multi-page PDF extraction engine with per-page text aggregation and character counting using ``pypdf``.
+  - Established a centralized ``PARSER_REGISTRY`` dictionary mapping file extensions (``.txt``, ``.pdf``) to parser strategy instances. New document format parsers can be registered dynamically without modifying core parsing dispatch logic (Open-Closed Principle).
+  - Maintained backward-compatible wrapper functions ``parse_txt()``, ``parse_pdf()``, and ``parse_document()``.
+* **Decoupled Token Estimation Engine** (``app/chunking/tokenizer.py``, ``app/chunking/__init__.py``):
+  - Created a dedicated ``estimate_tokens(text: str) -> int`` utility, isolating token estimation heuristics (character count heuristics with minimum non-empty bounds) from chunk splitting logic.
+  - Formed a clean architectural seam enabling future pluggable tokenizers (such as ``tiktoken`` or HuggingFace tokenizers).
+* **Configurable Document Ingestion & Storage Settings** (``app/config.py``, ``.env.example``):
+  - ``RAG_ALLOWED_EXTENSIONS``: Configurable comma-separated list of permitted file extensions (defaults to ``.txt,.pdf``).
+  - ``RAG_MAX_FILE_SIZE_MB``: Configurable maximum document upload size in megabytes (defaults to 10 MB, stored as ``max_file_size_bytes``).
+  - ``RAG_HASH_BUFFER_SIZE``: Configurable read buffer size for streaming SHA-256 file checksum calculation (defaults to 65,536 bytes).
+  - ``RAG_CHUNK_SEPARATORS``: JSON-encoded array specifying the hierarchical separator fallback sequence for recursive text chunking.
+  - ``CHROMA_DISTANCE_METRIC``: Configurable vector space metric (``cosine``, ``l2``, ``ip``) matching collection geometry.
+  - ``CHROMA_BATCH_SIZE``: Configurable chunk insertion batch limit (defaults to 1000) to prevent SQLite parameter threshold exhaustion.
+* **Unit Test Suite for Chunking and Token Estimation** (``tests/test_chunking.py``):
+  - Comprehensive unit test suite validating ``RecursiveTextSplitter``, custom separator sequences, overlap constraints, and ``estimate_tokens()`` behavior.
 
 Changed / Refactored
 --------------------
-* **Validation Submodule Decoupling** (``app/ingestion/validator.py``):
-  Removed hardcoded module-level constants (``MAX_FILE_SIZE_BYTES``, ``ALLOWED_EXTENSIONS``); file validation now dynamically defaults to ``config.storage`` while permitting explicit runtime overrides.
-* **Configurable Boundary-Aware Text Splitting** (``app/chunking/text_splitter.py``):
-  Refactored ``RecursiveTextSplitter`` to consume hierarchical separator lists from ``ChunkConfig`` rather than hardcoding split delimiters, and delegated token counting to ``estimate_tokens()``.
-* **Embedding Model Resolution & Metric Abstractions** (``app/embedding/embedder.py``):
-  Refactored ``EmbeddingManager`` to dynamically resolve embedding functions based on ``model_name``, and exposed explicit ``dimension``, ``distance_metric`` properties alongside a unified ``distance_to_similarity()`` conversion helper.
-* **Metric-Agnostic Vector Storage & Safe Batching** (``app/storage/vector_store.py``):
-  - Dynamic HNSW space assignment on collection initialization and reset via ``embedding_manager.distance_metric``.
-  - Metric-agnostic similarity conversion in semantic query search.
-  - Safe paginated insertion of document chunks in batches of ``config.storage.batch_size`` (default 1000).
+* **Validation Submodule Decoupling & Dynamic Thresholds** (``app/ingestion/validator.py``):
+  - Eliminated hardcoded module-level constants (``MAX_FILE_SIZE_BYTES``, ``ALLOWED_EXTENSIONS``).
+  - Refactored ``validate_file()`` to dynamically resolve limits from ``config.storage.max_file_size_bytes`` and ``config.storage.allowed_extensions`` while supporting explicit per-call argument overrides.
+* **Config-Driven Recursive Text Splitting** (``app/chunking/text_splitter.py``):
+  - Refactored ``RecursiveTextSplitter`` to consume hierarchical separator lists from ``ChunkConfig.separators`` instead of hardcoded strings.
+  - Integrated ``estimate_tokens()`` for chunk-level token estimates.
+* **Dynamic Embedding Model Resolution & Metric Abstractions** (``app/embedding/embedder.py``):
+  - Enhanced ``EmbeddingManager`` to dynamically resolve embedding functions based on ``model_name``.
+  - Exposed explicit model properties: ``dimension`` (vector dimension, default 384) and ``distance_metric`` (resolved from storage configuration).
+  - Added unified ``distance_to_similarity(distance: float) -> float`` conversion helper mapping raw distance to normalized ``[0.0, 1.0]`` similarity across Cosine, Inner Product (IP), and Euclidean (L2) spaces.
+* **Metric-Agnostic Vector Storage & Chunk Batching Loop** (``app/storage/vector_store.py``):
+  - Configured ChromaDB collections with dynamic HNSW space metadata (``metadata={"hnsw:space": self.embedding_manager.distance_metric}``) on initialization and collection reset.
+  - Replaced hardcoded cosine similarity math with ``self.embedding_manager.distance_to_similarity(dist)`` in query result formatting.
+  - Implemented safe paginated batch insertion in ``add_chunks()`` looping over chunks in increments of ``config.storage.batch_size`` (default 1000) with detailed logging.
 
 Fixed
 -----
-* Fixed rigid file size validation and extension restrictions across document ingestion.
-* Eliminated magic number (64 KB) in ``compute_file_checksum()``.
-* Eliminated hardcoded cosine distance assumptions in vector retrieval scoring and distance calculation comments.
+* Eliminated rigid file size validation and extension restrictions across document ingestion routines.
+* Removed hardcoded 64 KB magic number in ``compute_sha256()``, replacing it with configurable buffer sizing.
+* Fixed hardcoded cosine distance assumptions in vector retrieval scoring.
 
 
-Retrieval, Generation & CLI
-===========================
+Retrieval, Generation & CLI Subsystem
+=====================================
 
 Added
 -----
-* **Versioned Prompt Asset Architecture** (``assets/prompts/``, ``app/augmentation/prompt_builder.py``):
-  Extracted system instructions and user query prompt templates into independent versioned text files (``assets/prompts/system-prompts/v1_system_instruction_001.txt`` and ``assets/prompts/full-prompt-templates/v1_user_query_template_001.txt``), dynamically loaded with fail-fast validation via ``_load_asset()``.
-* **Externalized NLP & Generation Config Assets** (``assets/configs/``, ``app/generation/generator.py``):
-  - ``assets/configs/generation_texts.json``: Externalized standard refusal messaging, refusal detection signatures, and provider fallback note templates.
-  - ``assets/configs/nlp_stopwords.json``: Externalized NLP stop words and generic domain anchor terms.
-* **Centralized CLI Theme & Glyphs** (``assets/configs/cli_theme.json``, ``cli.py``):
-  Externalized all CLI terminal styling tokens, status icons (``⏳``, ``⚡``, ``✔``, ``✖``), benchmark test glyphs, and prompt arrows into a centralized theme configuration.
-* **Generation & Debugging Configuration Settings** (``app/config.py``, ``.env.example``):
-  Added environment settings for:
-  - ``LLM_DEBUG_INFO``: Toggle verbose LiteLLM telemetry and debugging info dynamically.
-  - ``LLM_OFFLINE_TOPIC_THRESHOLD``: Configurable relevance ratio for offline topic matching (default 0.4).
-  - ``LLM_OFFLINE_MAX_SENTENCES``: Configurable response sentence limit for offline generation (default 4).
+* **Versioned External Prompt Asset Management** (``assets/prompts/``, ``app/augmentation/prompt_builder.py``):
+  - Extracted hardcoded system instructions into ``assets/prompts/system-prompts/v1_system_instruction_001.txt``.
+  - Extracted user query template into ``assets/prompts/full-prompt-templates/v1_user_query_template_001.txt``.
+  - Implemented ``_load_asset()`` in ``PromptBuilder`` with fail-fast file validation, while maintaining optional constructor parameter overrides for testing.
+  - Cleaned up ``app/augmentation/__init__.py`` to remove deprecated prompt string exports.
+* **Externalized NLP & Generation Assets** (``assets/configs/``, ``app/generation/generator.py``):
+  - ``assets/configs/generation_texts.json``: Externalized standard refusal response message, refusal detection signatures, and provider fallback note templates.
+  - ``assets/configs/nlp_stopwords.json``: Externalized NLP stop words and generic domain anchor terms used for topic keyword filtering.
+  - Implemented robust ``_load_json_asset()`` loader with fail-fast validation.
+* **Centralized CLI Theme & Glyph Tokens** (``assets/configs/cli_theme.json``, ``cli.py``):
+  - Centralized terminal styling tokens, status icons (``⏳``, ``⚡``, ``✔``, ``✖``, ``•``, ``›``), table border styles, and alert colors in ``assets/configs/cli_theme.json``.
+  - Implemented resilient fallback loader ``_load_cli_theme()`` in ``cli.py``.
+* **Configurable LLM Telemetry & Offline Response Controls** (``app/config.py``, ``.env.example``):
+  - ``LLM_DEBUG_INFO``: Boolean environment variable to toggle verbose LiteLLM telemetry and debugging info dynamically.
+  - ``LLM_OFFLINE_TOPIC_THRESHOLD``: Configurable relevance ratio for offline topic matching (defaults to 0.4).
+  - ``LLM_OFFLINE_MAX_SENTENCES``: Configurable response sentence limit for offline generation (defaults to 4).
 
 Changed / Refactored
 --------------------
-* **Metric-Agnostic Retrieval Comments** (``app/retrieval/retriever.py``):
-  Removed hardcoded cosine metric assumptions in proximity threshold comments.
-* **Decoupled LLM Generator Orchestration** (``app/generation/generator.py``):
-  Refactored ``LLMGenerator`` to dynamically consume externalized refusal strings, NLP stop words, and configurable offline thresholds.
-* **Unified CLI Theme Architecture** (``cli.py``):
-  Refactored event listeners, banners, tables, and interactive prompt handlers to consume tokens from the unified ``UI_THEME`` asset.
+* **Metric-Agnostic Retrieval Documentation** (``app/retrieval/retriever.py``):
+  - Removed hardcoded metric assumptions in semantic proximity threshold comments.
+* **Decoupled Generator Orchestration** (``app/generation/generator.py``):
+  - Configured ``litellm.suppress_debug_info`` dynamically from ``config.llm.suppress_debug_info``.
+  - Refactored offline fallback extraction to consume externalized stop words, anchor terms, configurable topic thresholds, and configurable sentence limits.
+* **Theme-Driven CLI Architecture** (``cli.py``):
+  - Refactored all banners, event listeners, summaries, question inspectors, and benchmark tables to render using ``UI_THEME`` tokens.
 
 Fixed
 -----
@@ -73,50 +92,55 @@ Fixed
 * Fixed hardcoded offline topic threshold and sentence length limits in fallback response generator (``FIX-GEN-04``, ``FIX-GEN-05``).
 
 
-Web Interface & API
-===================
+Web Interface & API Subsystem
+=============================
 
 Added
 -----
-* **Flask-CORS Strict Localhost Whitelist** (``app/api/security.py``, ``app/config.py``, ``requirements.txt``, ``.env.example``):
-  Integrated ``flask-cors>=4.0.0`` to protect API endpoints (``/api/*``) with strict, configurable localhost origin whitelisting via ``ServerConfig.cors_origins`` (``CORS_ORIGINS``).
-* **Hierarchical ES6 Frontend Architecture** (``app/static/js/``):
-  Deconstructed monolithic script into clean, cohesive ES6 component modules:
-  - ``modules/api.js``: Centralized transport client for REST API endpoints and Server-Sent Events (SSE) streaming readers.
-  - ``modules/state.js``: Shared client state management and reactive pub-sub event bus.
-  - ``components/modal.js``: Reusable modal dialog controller for prompt and context chunk inspection.
-  - ``components/inspector.js``: Real-time pipeline steppers and diagnostic metrics panel.
-  - ``components/chat.js``: Chat feed manager, streaming response consumer, and source citation pill renderer.
-  - ``components/ingestion.js``: Drag-and-drop file upload, chunking configuration, indexed document card list, and sample loader.
-  - ``components/evaluation.js``: Benchmark execution trigger, summary metrics card updates, and diagnostic results table renderer.
-  - ``app.js``: Application bootstrap entrypoint and tab router.
-* **Modular Jinja2 Template Partials & Layout** (``templates/``):
-  Extracted monolithic template into structured partials:
-  - ``base.html``: Clean HTML5 base shell with typography, stylesheets, and Jinja2 extension blocks.
-  - ``partials/header.html``: Navbar branding, status indicator, sample/reset actions, and navigation tabs.
-  - ``partials/tab_chat.html``: Chat interface, suggestion chips, message feed, and live QA pipeline inspector.
-  - ``partials/tab_ingestion.html``: Ingestion upload zone, parameter inputs, stepper, and indexed document list.
-  - ``partials/tab_evaluation.html``: Benchmark execution header, 5-metric summary grid, and diagnostic results table.
-  - ``partials/modal_inspector.html``: Reusable inspector details modal dialog.
-  - ``index.html``: Container template extending ``base.html`` and including partials.
-* **Component-Based CSS Architecture** (``app/static/css/``):
-  Reorganized monolithic stylesheet into focused stylesheets imported via ``style.css``:
-  - ``base.css``: Earthy color palette tokens (``:root``), CSS reset, and typography.
-  - ``layout.css``: App container, header branding, navigation tabs, panels, and button utilities.
-  - ``components/chat.css``: Chat layout, message bubbles, citation pills, and input controls.
-  - ``components/inspector.css``: Stepper timeline, running/completed/failed states, and diagnostic metrics grid.
-  - ``components/ingestion.css``: Drag-and-drop dropzone, upload info, and document cards.
-  - ``components/evaluation.css``: Benchmark cards, diagnostic results table, and pass/fail badges.
-  - ``components/modal.css``: Modal backdrop and dialog cards.
-  - ``style.css``: Master stylesheet orchestrating modular ``@import`` rules.
+* **Flask-CORS Strict Localhost Whitelist Integration** (``app/api/security.py``, ``app/config.py``, ``requirements.txt``, ``.env.example``):
+  - Added ``flask-cors>=4.0.0`` dependency.
+  - Added ``cors_origins`` configuration to ``ServerConfig`` parsed from ``CORS_ORIGINS`` environment variable (defaults to ``http://127.0.0.1:5000``, ``http://localhost:5000``, ``http://127.0.0.1:3000``, ``http://localhost:3000``).
+  - Implemented ``setup_cors(app)`` scoping strict origins on ``r"/api/*"`` routes with ``supports_credentials=True``.
+  - Connected CORS middleware in ``create_app()`` in ``app/main.py``.
+* **Hierarchical ES6 Frontend JavaScript Architecture** (``app/static/js/``):
+  - Deconstructed monolithic 676-line ``app.js`` into modular ES6 modules and components:
+    * ``modules/api.js``: Centralized transport client for REST endpoints and Server-Sent Events (SSE) streaming readers (``streamQuery``, ``streamIngest``, ``fetchStatus``, ``fetchDocuments``, ``deleteDocument``, ``loadSamples``, ``resetDatabase``, ``runEvaluation``).
+    * ``modules/state.js``: Reactive pub-sub event bus and client state manager (``state``, ``on``, ``emit``).
+    * ``components/modal.js``: Reusable modal dialog controller for prompt and context chunk inspection.
+    * ``components/inspector.js``: Real-time pipeline vertical steppers (running, completed, failed states) and diagnostic metrics panel.
+    * ``components/chat.js``: Chat feed manager, streaming response consumer, suggestion chips, and source citation pill renderer.
+    * ``components/ingestion.js``: Drag-and-drop file upload, chunking configuration inputs, indexed document card list, and sample loader.
+    * ``components/evaluation.js``: Benchmark execution trigger, summary metrics card updates, and diagnostic results table renderer.
+    * ``app.js``: Clean application bootstrap entrypoint and tab navigation router.
+* **Modular Jinja2 Template Partials & Base Layout** (``templates/``):
+  - Deconstructed monolithic 422-line ``index.html`` into structured Jinja2 partials:
+    * ``base.html``: Clean HTML5 base shell with typography, stylesheets, and Jinja2 blocks (``title``, ``head``, ``content``, ``scripts``).
+    * ``partials/header.html``: Navbar branding, dynamic version badge, status indicator, sample/reset actions, and navigation tabs.
+    * ``partials/tab_chat.html``: Chat interface, suggestion chips, message feed, and live QA pipeline inspector.
+    * ``partials/tab_ingestion.html``: Ingestion upload zone, parameter inputs, stepper, and indexed document list.
+    * ``partials/tab_evaluation.html``: Benchmark execution header, 5-metric summary grid, and diagnostic results table.
+    * ``partials/modal_inspector.html``: Reusable inspector details modal dialog.
+    * ``index.html``: Container template extending ``base.html`` and including partials.
+* **Domain-Driven Component CSS Architecture** (``app/static/css/``):
+  - Decomposed monolithic 978-line ``style.css`` into focused, domain-driven stylesheets imported via ``style.css``:
+    * ``base.css``: Earthy color palette tokens (``:root``), CSS reset, and typography.
+    * ``layout.css``: App container, header branding, navigation tabs, panels, and button utilities.
+    * ``components/chat.css``: Chat layout, message bubbles, citation pills, and input controls.
+    * ``components/inspector.css``: Stepper timeline, running/completed/failed states, and diagnostic metrics grid.
+    * ``components/ingestion.css``: Drag-and-drop dropzone, upload info, and document cards.
+    * ``components/evaluation.css``: Benchmark cards, diagnostic results table, and pass/fail badges.
+    * ``components/modal.css``: Modal backdrop and dialog cards.
+    * ``style.css``: Master stylesheet orchestrating modular ``@import`` rules.
 
 Changed / Refactored
 --------------------
 * **Decoupled Pipeline Dependency Injection** (``app/api/routes.py``, ``app/main.py``):
-  Removed hardcoded module-level ``rag_pipeline = RAGPipeline()`` singleton from API routes. Injected pipeline instance via Flask application context (``app.extensions["rag_pipeline"]``) in ``create_app()``, implemented a thread-safe ``get_pipeline()`` accessor with lazy fallback, and captured pipeline instances in request contexts prior to spawning streaming worker threads.
+  - Removed hardcoded module-level ``rag_pipeline = RAGPipeline()`` singleton from API routes.
+  - Injected pipeline instance via Flask application context (``app.extensions["rag_pipeline"]``) in ``create_app()``.
+  - Implemented thread-safe ``get_pipeline() -> RAGPipeline`` accessor resolving from ``current_app.extensions`` with lazy fallback.
+  - Captured pipeline instances in request contexts prior to spawning streaming worker threads in SSE endpoints.
 
 Fixed
 -----
 * Eliminated tight coupling of API routes to a singleton pipeline instance (``REFACTOR-API-02``).
 * Fixed monolithic frontend architecture by deconstructing JS, Jinja2 templates, and CSS into domain-driven modular files (``REFACTOR-UI-01``, ``REFACTOR-UI-02``, ``REFACTOR-UI-03``).
-
