@@ -1,12 +1,12 @@
-# Step 2: Retrieval, Prompt Augmentation, Generation, CLI & Evaluation
+# Retrieval, Prompt Augmentation, Generation, CLI & Evaluation
 
-This document provides a detailed technical breakdown of **Step 2** in the **Doc-QA Assistant** RAG pipeline. It covers semantic top-k retrieval, confidence thresholding, grounded prompt augmentation, LiteLLM orchestration, anti-hallucination guardrails, the interactive CLI tool, and the automated benchmark.
+This document provides a detailed technical breakdown in the RAG pipeline. It covers semantic top-k retrieval, confidence thresholding, grounded prompt augmentation, LiteLLM orchestration, anti-hallucination guardrails, the interactive CLI tool, and the automated benchmark.
 
 ---
 
 ## 1. Architectural Goal & Pipeline Flow
 
-Step 2 connects the persistent vector store created in Step 1 with query processing, LLM generation, and evaluation to produce a complete, truthful question-answering system.
+The persistent vector store created in Step 1 with query processing, LLM generation, and evaluation to produce a complete, truthful question-answering system.
 
 ```
 [User Query]

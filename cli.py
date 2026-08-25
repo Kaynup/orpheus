@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Doc-QA Assistant - Day 2 CLI Interface
-A truthful, educational command-line tool for interacting with the full RAG pipeline.
+CLI TUI Interface
 """
 
 from __future__ import annotations
