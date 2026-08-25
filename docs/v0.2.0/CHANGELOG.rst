@@ -71,3 +71,52 @@ Fixed
 -----
 * Fixed hardcoded telemetry suppression in LiteLLM orchestration (``FIX-GEN-01``).
 * Fixed hardcoded offline topic threshold and sentence length limits in fallback response generator (``FIX-GEN-04``, ``FIX-GEN-05``).
+
+
+Web Interface & API
+===================
+
+Added
+-----
+* **Flask-CORS Strict Localhost Whitelist** (``app/api/security.py``, ``app/config.py``, ``requirements.txt``, ``.env.example``):
+  Integrated ``flask-cors>=4.0.0`` to protect API endpoints (``/api/*``) with strict, configurable localhost origin whitelisting via ``ServerConfig.cors_origins`` (``CORS_ORIGINS``).
+* **Hierarchical ES6 Frontend Architecture** (``app/static/js/``):
+  Deconstructed monolithic script into clean, cohesive ES6 component modules:
+  - ``modules/api.js``: Centralized transport client for REST API endpoints and Server-Sent Events (SSE) streaming readers.
+  - ``modules/state.js``: Shared client state management and reactive pub-sub event bus.
+  - ``components/modal.js``: Reusable modal dialog controller for prompt and context chunk inspection.
+  - ``components/inspector.js``: Real-time pipeline steppers and diagnostic metrics panel.
+  - ``components/chat.js``: Chat feed manager, streaming response consumer, and source citation pill renderer.
+  - ``components/ingestion.js``: Drag-and-drop file upload, chunking configuration, indexed document card list, and sample loader.
+  - ``components/evaluation.js``: Benchmark execution trigger, summary metrics card updates, and diagnostic results table renderer.
+  - ``app.js``: Application bootstrap entrypoint and tab router.
+* **Modular Jinja2 Template Partials & Layout** (``templates/``):
+  Extracted monolithic template into structured partials:
+  - ``base.html``: Clean HTML5 base shell with typography, stylesheets, and Jinja2 extension blocks.
+  - ``partials/header.html``: Navbar branding, status indicator, sample/reset actions, and navigation tabs.
+  - ``partials/tab_chat.html``: Chat interface, suggestion chips, message feed, and live QA pipeline inspector.
+  - ``partials/tab_ingestion.html``: Ingestion upload zone, parameter inputs, stepper, and indexed document list.
+  - ``partials/tab_evaluation.html``: Benchmark execution header, 5-metric summary grid, and diagnostic results table.
+  - ``partials/modal_inspector.html``: Reusable inspector details modal dialog.
+  - ``index.html``: Container template extending ``base.html`` and including partials.
+* **Component-Based CSS Architecture** (``app/static/css/``):
+  Reorganized monolithic stylesheet into focused stylesheets imported via ``style.css``:
+  - ``base.css``: Earthy color palette tokens (``:root``), CSS reset, and typography.
+  - ``layout.css``: App container, header branding, navigation tabs, panels, and button utilities.
+  - ``components/chat.css``: Chat layout, message bubbles, citation pills, and input controls.
+  - ``components/inspector.css``: Stepper timeline, running/completed/failed states, and diagnostic metrics grid.
+  - ``components/ingestion.css``: Drag-and-drop dropzone, upload info, and document cards.
+  - ``components/evaluation.css``: Benchmark cards, diagnostic results table, and pass/fail badges.
+  - ``components/modal.css``: Modal backdrop and dialog cards.
+  - ``style.css``: Master stylesheet orchestrating modular ``@import`` rules.
+
+Changed / Refactored
+--------------------
+* **Decoupled Pipeline Dependency Injection** (``app/api/routes.py``, ``app/main.py``):
+  Removed hardcoded module-level ``rag_pipeline = RAGPipeline()`` singleton from API routes. Injected pipeline instance via Flask application context (``app.extensions["rag_pipeline"]``) in ``create_app()``, implemented a thread-safe ``get_pipeline()`` accessor with lazy fallback, and captured pipeline instances in request contexts prior to spawning streaming worker threads.
+
+Fixed
+-----
+* Eliminated tight coupling of API routes to a singleton pipeline instance (``REFACTOR-API-02``).
+* Fixed monolithic frontend architecture by deconstructing JS, Jinja2 templates, and CSS into domain-driven modular files (``REFACTOR-UI-01``, ``REFACTOR-UI-02``, ``REFACTOR-UI-03``).
+
