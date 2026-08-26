@@ -6,10 +6,12 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 16px;
+    padding: 18px 20px;
     box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 600px;
 }
 
 .inspector-header {
@@ -32,19 +34,20 @@
     font-size: 11px;
     color: var(--text-light);
     line-height: 1.4;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
 
 .pipeline-stepper {
     display: flex;
     flex-direction: column;
-    gap: 26px;
+    gap: 44px;
     position: relative;
+    padding-top: 6px;
 }
 
 .step-item {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     position: relative;
 }
 
@@ -54,7 +57,7 @@
     top: 24px;
     left: 11px;
     width: 2px;
-    height: calc(100% + 2px);
+    height: calc(100% + 20px);
     background: var(--border-color-light);
     z-index: 1;
 }
@@ -78,6 +81,7 @@
     position: relative;
     z-index: 2;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .step-content {
@@ -120,45 +124,4 @@
     background: var(--status-error-bg);
     border-color: var(--color-accent-terracotta);
     color: var(--status-error-text);
-}
-
-/* Diagnostic Metric Grid */
-.inspector-metrics {
-    margin-top: 20px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border-color-light);
-}
-
-.inspector-metrics h4 {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
-}
-
-.metric-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.metric-card {
-    background: var(--bg-surface-soft);
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    display: flex;
-    flex-direction: column;
-}
-
-.metric-label {
-    font-size: 10.5px;
-    color: var(--text-muted);
-}
-
-.metric-val {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-primary);
 }

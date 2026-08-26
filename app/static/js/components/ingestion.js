@@ -4,7 +4,7 @@
 
 import { fetchDocuments, deleteDocument, loadSamples, resetDatabase, streamIngest, fetchStatus } from "../modules/api.js";
 import { resetIngestStepper, updateIngestStep } from "./inspector.js";
-import { renderChatDocsRibbon } from "./chat.js";
+import { renderChatDocsRibbon, renderModelDropdown } from "./chat.js";
 
 let activeFile = null;
 
@@ -22,73 +22,71 @@ export function initIngestion() {
     const btnLoadSamples = document.getElementById("btn-load-samples");
     const btnResetDb = document.getElementById("btn-reset-db");
 
-    function handleFileSelect(file) {
+    if (!dropZone || !fileInput) return;
+
+    function handleFile(file) {
+        if (!file) return;
+        const validExts = [".txt", ".pdf"];
+        const ext = "." + file.name.split(".").pop().toLowerCase();
+        if (!validExts.includes(ext)) {
+            alert("Only .txt and .pdf files are supported.");
+            return;
+        }
+
         activeFile = file;
-        if (selectedFileName) {
-            selectedFileName.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-        }
-        if (selectedFileInfo) {
-            selectedFileInfo.style.display = "flex";
-        }
-        if (btnUploadSubmit) {
-            btnUploadSubmit.disabled = false;
-        }
+        selectedFileName.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        selectedFileInfo.style.display = "flex";
+        btnUploadSubmit.disabled = false;
     }
 
-    if (dropZone && fileInput) {
-        dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("click", () => fileInput.click());
 
-        dropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dropZone.classList.add("dragover");
-        });
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+    });
 
-        dropZone.addEventListener("dragleave", () => {
-            dropZone.classList.remove("dragover");
-        });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("drag-over");
+    });
 
-        dropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dropZone.classList.remove("dragover");
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleFileSelect(e.dataTransfer.files[0]);
-            }
-        });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
 
-        fileInput.addEventListener("change", () => {
-            if (fileInput.files && fileInput.files.length > 0) {
-                handleFileSelect(fileInput.files[0]);
-            }
-        });
-    }
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
 
-    if (btnClearFile) {
-        btnClearFile.addEventListener("click", () => {
-            activeFile = null;
-            if (fileInput) fileInput.value = "";
-            if (selectedFileInfo) selectedFileInfo.style.display = "none";
-            if (btnUploadSubmit) btnUploadSubmit.disabled = true;
-        });
-    }
+    btnClearFile.addEventListener("click", () => {
+        activeFile = null;
+        fileInput.value = "";
+        selectedFileInfo.style.display = "none";
+        btnUploadSubmit.disabled = true;
+    });
 
-    if (uploadForm) {
-        uploadForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            if (!activeFile) return;
+    uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!activeFile) return;
 
-            if (btnUploadSubmit) {
-                btnUploadSubmit.disabled = true;
-                btnUploadSubmit.textContent = "Indexing Document...";
-            }
-            resetIngestStepper();
+        btnUploadSubmit.disabled = true;
+        btnUploadSubmit.textContent = "Ingesting...";
+        resetIngestStepper();
 
-            const formData = new FormData();
-            formData.append("file", activeFile);
-            formData.append("chunk_size", chunkSizeInput ? chunkSizeInput.value || "500" : "500");
-            formData.append("chunk_overlap", chunkOverlapInput ? chunkOverlapInput.value || "50" : "50");
+        const chunkSize = parseInt(chunkSizeInput.value, 10) || 500;
+        const chunkOverlap = parseInt(chunkOverlapInput.value, 10) || 50;
 
-            try {
-                await streamIngest(formData, {
+        try {
+            await streamIngest(
+                activeFile,
+                { chunk_size: chunkSize, chunk_overlap: chunkOverlap },
+                {
                     onEvent: (event) => {
                         updateIngestStep(event.stage, event.status, event.message);
                     },
@@ -110,7 +108,6 @@ export function initIngestion() {
                 }
             }
         });
-    }
 
     if (btnRefreshDocs) {
         btnRefreshDocs.addEventListener("click", loadDocumentsList);
@@ -160,14 +157,17 @@ export async function updateStatus() {
         if (data.version && versionBadge) {
             versionBadge.textContent = `v${data.version}`;
         }
+        if (data.available_models) {
+            renderModelDropdown(data.available_models, data.config?.default_model);
+        }
         if (data.vector_store && dbStatusText) {
             const totalChunks = data.vector_store.total_chunks || 0;
             const totalDocs = data.vector_store.total_documents || 0;
-            dbStatusText.textContent = `(${totalChunks} chunks)`;
+            dbStatusText.textContent = `${totalChunks} chunks`;
             if (tabDocCount) tabDocCount.textContent = totalDocs;
         }
     } catch (err) {
-        if (dbStatusText) dbStatusText.textContent = "(connecting...)";
+        if (dbStatusText) dbStatusText.textContent = "connecting...";
     }
 }
 

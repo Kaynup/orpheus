@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Generator
-from flask import Blueprint, Response, jsonify, render_template, request
+from dotenv import load_dotenv
+from flask import Blueprint, Response, jsonify, render_template, request, send_file
 
 from app.api.security import save_uploaded_file
 from app.config import config
@@ -20,6 +23,122 @@ from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
 api_bp = Blueprint("api", __name__)
 
 _default_pipeline: RAGPipeline | None = None
+
+
+def resolve_model_item(model_str: str, source_badge: str = "Configured") -> dict[str, str]:
+    """Parse any model identifier string into a standardized model object with clean metadata."""
+    model_str = model_str.strip()
+    if "/" in model_str:
+        provider_key, raw_name = model_str.split("/", 1)
+    else:
+        provider_key, raw_name = "custom", model_str
+
+    pk = provider_key.lower()
+    if pk in ("gemini", "google"):
+        provider = "Google Cloud"
+        name = f"Google Gemini ({raw_name})"
+    elif pk == "openrouter":
+        provider = "OpenRouter"
+        name = f"OpenRouter / {raw_name}"
+    elif pk in ("openai", "gpt"):
+        provider = "OpenAI"
+        name = f"OpenAI / {raw_name}"
+    elif pk == "ollama":
+        provider = "Ollama Local"
+        name = f"Ollama / {raw_name}"
+    elif pk == "offline":
+        provider = "Local Extractor"
+        name = "Offline Grounded Extractor"
+        source_badge = "No Key Required"
+    else:
+        provider = provider_key.capitalize()
+        name = f"{provider} / {raw_name}"
+
+    return {
+        "id": model_str,
+        "name": name,
+        "provider": provider,
+        "badge": source_badge,
+    }
+
+
+def get_available_models() -> list[dict[str, str]]:
+    """
+    Discover available LLM models dynamically:
+    1. Reads live .env variables ending with '_MODEL' or containing '_MODEL'.
+    2. Probes local Ollama instance for pulled models.
+    3. Guarantees Offline Grounded Extractor fallback.
+    """
+    dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path, override=True)
+
+    models: list[dict[str, str]] = []
+    seen_ids: set[str] = set()
+
+    def add_model(model_dict: dict[str, str]):
+        m_id = model_dict["id"]
+        if m_id not in seen_ids:
+            seen_ids.add(m_id)
+            models.append(model_dict)
+
+    # 1. Extract all environment variables containing '_MODEL' (e.g. LLM_MODEL, GEMINI_MODEL, OLLAMA_MODEL, etc.)
+    for key, val in os.environ.items():
+        if "_MODEL" in key and val and val.strip():
+            val = val.strip()
+            for single_model in val.split(","):
+                single_model = single_model.strip()
+                if single_model:
+                    badge = "Default" if key == "LLM_MODEL" else "Configured"
+                    add_model(resolve_model_item(single_model, source_badge=badge))
+
+    # 2. Probe Ollama daemon if running for pulled models
+    ollama_urls = []
+    if config.llm.ollama_api_base:
+        ollama_urls.append(config.llm.ollama_api_base.rstrip("/"))
+    if os.getenv("OLLAMA_API_BASE"):
+        ollama_urls.append(os.getenv("OLLAMA_API_BASE").rstrip("/"))
+    ollama_urls.extend(["http://127.0.0.1:11434", "http://localhost:11434"])
+
+    for base_url in dict.fromkeys(ollama_urls):
+        try:
+            req = urllib.request.Request(
+                f"{base_url}/api/tags",
+                headers={"User-Agent": "Orpheus/0.2.0"},
+            )
+            with urllib.request.urlopen(req, timeout=1.0) as response:
+                if response.status == 200:
+                    raw_data = response.read().decode("utf-8")
+                    payload = json.loads(raw_data)
+                    installed_models = payload.get("models", [])
+                    for item in installed_models:
+                        raw_name = item.get("name") or item.get("model")
+                        if not raw_name:
+                            continue
+                        clean_tag = raw_name.replace("ollama/", "")
+                        model_id = f"ollama/{clean_tag}"
+                        details = item.get("details") or {}
+                        param_size = details.get("parameter_size")
+                        badge_text = f"Local ({param_size})" if param_size else "Local Service"
+                        add_model({
+                            "id": model_id,
+                            "name": f"Ollama / {clean_tag}",
+                            "provider": "Ollama Local",
+                            "badge": badge_text,
+                        })
+                    break
+        except Exception:
+            continue
+
+    # 3. Always include Offline Grounded Extractor
+    add_model({
+        "id": "offline",
+        "name": "Offline Grounded Extractor",
+        "provider": "Local Extractor",
+        "badge": "No Key Required",
+    })
+
+    return models
 
 
 def get_pipeline() -> RAGPipeline:
@@ -40,7 +159,32 @@ def get_pipeline() -> RAGPipeline:
     return _default_pipeline
 
 
-@api_bp.route("/")
+@api_bp.route("/favicon.ico")
+@api_bp.route("/favicon.png")
+@api_bp.route("/assets/favicon.png")
+@api_bp.route("/static/favicon.png")
+def favicon():
+    """Serve application favicon from assets directory."""
+    root_dir = Path(__file__).resolve().parent.parent.parent
+    assets_dir = root_dir / "assets"
+    favicon_path = assets_dir / "favicon.png"
+
+    if not favicon_path.exists():
+        root_favicon = root_dir / "favicon.png"
+        if root_favicon.exists():
+            try:
+                import shutil
+                assets_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(root_favicon, favicon_path)
+            except Exception:
+                favicon_path = root_favicon
+
+    if favicon_path.exists():
+        return send_file(favicon_path, mimetype="image/png")
+    return Response(status=404)
+
+
+@api_bp.route("/", methods=["GET"])
 def index():
     """Render the single-page Orpheus web application."""
     return render_template("index.html", version=config.version)
@@ -49,24 +193,31 @@ def index():
 @api_bp.route("/api/status", methods=["GET"])
 def get_status():
     """Return persistent vector database status and configuration."""
+    dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path, override=True)
+
     pipeline = get_pipeline()
     stats = pipeline.vector_store.get_collection_stats()
     samples_dir = Path(config.storage.samples_dir)
     sample_files = [f.name for f in samples_dir.glob("*.*")] if samples_dir.exists() else []
+
+    current_default_model = os.getenv("LLM_MODEL") or config.llm.model
 
     return jsonify({
         "status": "ready",
         "version": config.version,
         "vector_store": stats,
         "sample_files": sample_files,
+        "available_models": get_available_models(),
         "config": {
-            "default_model": config.llm.model,
+            "default_model": current_default_model,
             "default_top_k": config.retrieval.top_k,
             "default_chunk_size": config.chunk.chunk_size,
             "default_chunk_overlap": config.chunk.chunk_overlap,
-            "has_gemini_key": bool(config.llm.gemini_api_key),
-            "has_openrouter_key": bool(config.llm.openrouter_api_key),
-            "has_openai_key": bool(config.llm.openai_api_key),
+            "has_gemini_key": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or config.llm.gemini_api_key),
+            "has_openrouter_key": bool(os.getenv("OPENROUTER_API_KEY") or config.llm.openrouter_api_key),
+            "has_openai_key": bool(os.getenv("OPENAI_API_KEY") or config.llm.openai_api_key),
         },
     })
 

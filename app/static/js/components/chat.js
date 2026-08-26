@@ -25,7 +25,7 @@ export function renderChatDocsRibbon(documents) {
     documents.forEach(doc => {
         const badge = document.createElement("div");
         badge.className = "chat-doc-badge";
-        badge.title = `${doc.filename} (${doc.chunk_count || 0} chunks) — Click to view in Documents tab`;
+        badge.title = `${doc.filename} (${doc.chunk_count || 0} chunks) - Click to view in Documents tab`;
 
         const extSpan = document.createElement("span");
         extSpan.className = "chat-doc-ext";
@@ -38,6 +38,104 @@ export function renderChatDocsRibbon(documents) {
             document.getElementById("tab-btn-ingest")?.click();
         });
         listContainer.appendChild(badge);
+    });
+}
+
+export function renderModelDropdown(availableModels, defaultModel) {
+    const menu = document.getElementById("model-dropdown-menu");
+    const trigger = document.getElementById("model-dropdown-trigger");
+    const nameLabel = document.getElementById("model-selected-name");
+    const badgeLabel = document.getElementById("model-selected-badge");
+    const hiddenSelect = document.getElementById("chat-model-select");
+
+    if (!menu || !trigger) return;
+    menu.replaceChildren();
+
+    const models = Array.isArray(availableModels) && availableModels.length > 0
+        ? availableModels
+        : [{ id: "offline", name: "Offline Grounded Extractor", provider: "Local Extractor", badge: "No Key Required" }];
+
+    let selectedModel = models.find(m => m.id === defaultModel) || models[0];
+
+    function applySelection(model) {
+        selectedModel = model;
+        if (nameLabel) nameLabel.textContent = model.name;
+        if (badgeLabel) badgeLabel.textContent = model.badge;
+        if (hiddenSelect) {
+            hiddenSelect.value = model.id;
+            hiddenSelect.dispatchEvent(new Event("change"));
+        }
+        menu.querySelectorAll(".model-opt-item").forEach(item => {
+            const isMatch = item.getAttribute("data-model-id") === model.id;
+            item.classList.toggle("active", isMatch);
+        });
+    }
+
+    models.forEach(model => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "model-opt-item";
+        item.setAttribute("data-model-id", model.id);
+        if (model.id === selectedModel.id) item.classList.add("active");
+
+        const mainDiv = document.createElement("div");
+        mainDiv.className = "model-opt-main";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "model-opt-name";
+        nameSpan.textContent = model.name;
+
+        const providerSpan = document.createElement("span");
+        providerSpan.className = "model-opt-provider";
+        providerSpan.textContent = model.provider;
+
+        mainDiv.appendChild(nameSpan);
+        mainDiv.appendChild(providerSpan);
+
+        const badgeSpan = document.createElement("span");
+        badgeSpan.className = "model-opt-badge";
+        badgeSpan.textContent = model.badge;
+
+        item.appendChild(mainDiv);
+        item.appendChild(badgeSpan);
+
+        item.addEventListener("click", (e) => {
+            e.stopPropagation();
+            applySelection(model);
+            menu.classList.remove("open");
+            trigger.classList.remove("active");
+            trigger.setAttribute("aria-expanded", "false");
+        });
+
+        menu.appendChild(item);
+    });
+
+    if (hiddenSelect) {
+        hiddenSelect.replaceChildren();
+        models.forEach(m => {
+            const opt = document.createElement("option");
+            opt.value = m.id;
+            opt.textContent = m.name;
+            if (m.id === selectedModel.id) opt.selected = true;
+            hiddenSelect.appendChild(opt);
+        });
+    }
+
+    applySelection(selectedModel);
+
+    trigger.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = menu.classList.toggle("open");
+        trigger.classList.toggle("active", isOpen);
+        trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    };
+
+    document.addEventListener("click", (e) => {
+        if (!menu.contains(e.target) && !trigger.contains(e.target)) {
+            menu.classList.remove("open");
+            trigger.classList.remove("active");
+            trigger.setAttribute("aria-expanded", "false");
+        }
     });
 }
 
@@ -55,6 +153,45 @@ export function initChat() {
     if (docsLabel) {
         docsLabel.addEventListener("click", () => {
             document.getElementById("tab-btn-ingest")?.click();
+        });
+    }
+
+    // Top-K Split Button Dropdown Handlers
+    const topKDropdownTrigger = document.getElementById("top-k-dropdown-trigger");
+    const topKDropdownMenu = document.getElementById("top-k-dropdown-menu");
+    const topKDisplayBadge = document.getElementById("top-k-display-badge");
+    const topKOptions = document.querySelectorAll(".top-k-opt");
+
+    if (topKDropdownTrigger && topKDropdownMenu) {
+        topKDropdownTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = topKDropdownMenu.classList.toggle("open");
+            topKDropdownTrigger.classList.toggle("active", isOpen);
+            topKDropdownTrigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        });
+
+        topKOptions.forEach(opt => {
+            opt.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const val = opt.getAttribute("data-val");
+                if (val && chatTopK) {
+                    chatTopK.value = val;
+                    if (topKDisplayBadge) topKDisplayBadge.textContent = `k=${val}`;
+                    topKOptions.forEach(o => o.classList.remove("active"));
+                    opt.classList.add("active");
+                }
+                topKDropdownMenu.classList.remove("open");
+                topKDropdownTrigger.classList.remove("active");
+                topKDropdownTrigger.setAttribute("aria-expanded", "false");
+            });
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!topKDropdownMenu.contains(e.target) && !topKDropdownTrigger.contains(e.target)) {
+                topKDropdownMenu.classList.remove("open");
+                topKDropdownTrigger.classList.remove("active");
+                topKDropdownTrigger.setAttribute("aria-expanded", "false");
+            }
         });
     }
 

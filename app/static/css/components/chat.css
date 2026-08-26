@@ -6,6 +6,7 @@
     display: grid;
     grid-template-columns: 1fr 340px;
     gap: 20px;
+    align-items: stretch;
 }
 
 @media (max-width: 900px) {
@@ -14,10 +15,16 @@
     }
 }
 
+.chat-left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .chat-main-panel {
     display: flex;
     flex-direction: column;
-    height: 640px;
+    height: 520px;
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -254,38 +261,314 @@
     background: #FFFFFF;
 }
 
-#chat-submit-btn {
-    padding: 0 22px;
+/* Split Button Container (80-20 Ask / Top-K Selector) */
+.split-btn-container {
+    display: inline-flex;
+    align-items: stretch;
     background-color: var(--color-primary);
-    color: #FFFFFF;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border-radius: var(--radius-sm);
+    position: relative;
+    border: 1px solid var(--color-primary);
+    box-shadow: 0 1px 3px rgba(35, 45, 40, 0.1);
+    flex-shrink: 0;
 }
 
-#chat-submit-btn:hover:not(:disabled) {
-    background-color: var(--color-accent-sage);
-    color: #E2ECE5;
+.btn-split-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.btn-split-main:hover:not(:disabled) {
+    color: #D2EEDB; /* Light green text on hover without background change */
+}
+
+.btn-split-main:hover:not(:disabled) .top-k-badge {
+    color: #D2EEDB;
+    border-color: rgba(210, 238, 219, 0.4);
+}
+
+.top-k-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-split-dropdown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.22);
+    color: #FFFFFF;
+    padding: 0 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-split-dropdown:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #D2EEDB;
+}
+
+.dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.btn-split-dropdown.active .dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+/* Floating Top-K Dropdown Menu */
+.top-k-dropdown-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 6px 20px rgba(35, 45, 40, 0.15);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+    z-index: 100;
+}
+
+.top-k-dropdown-menu.open {
+    display: flex;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.top-k-menu-header {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-light);
+    padding: 4px 8px 2px;
+}
+
+.top-k-opt {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.top-k-opt:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.top-k-opt.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+/* Standalone Model Orchestration Card */
+.model-orchestration-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.orchestration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.orchestration-label {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: -0.2px;
+}
+
+.orchestration-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Custom Model Dropdown (matches Ask split button style) */
+.model-custom-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.model-trigger-btn {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(35, 45, 40, 0.04);
+}
+
+.model-trigger-btn:hover,
+.model-trigger-btn.active {
+    border-color: var(--color-accent-sage);
+    background: #FFFFFF;
+}
+
+.model-trigger-btn.active .dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+.model-trigger-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.model-selected-name {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.model-selected-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border-radius: 4px;
+    border: 1px solid #CFE0D6;
+}
+
+/* Floating Model Dropdown Menu */
+.model-dropdown-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(35, 45, 40, 0.14);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 200;
+}
+
+.model-dropdown-menu.open {
+    display: flex;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+.model-opt-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    text-align: left;
+}
+
+.model-opt-item:hover {
+    background: var(--color-primary-soft);
     border-color: var(--color-accent-sage);
 }
 
-.chat-controls-row {
+.model-opt-item.active {
+    background: var(--color-primary-soft);
+    border-color: var(--color-accent-sage);
+}
+
+.model-opt-main {
     display: flex;
-    gap: 16px;
-    margin-top: 8px;
-    font-size: 12px;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.model-opt-name {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.model-opt-item.active .model-opt-name {
+    color: var(--color-primary);
+}
+
+.model-opt-provider {
+    font-size: 10.5px;
     color: var(--text-muted);
 }
 
-.control-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.model-opt-badge {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: var(--bg-surface-soft);
+    color: var(--text-muted);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
 
-.control-group select {
-    padding: 4px 8px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    background: var(--bg-surface);
-    font-size: 12px;
-    color: var(--text-main);
+.model-opt-item.active .model-opt-badge {
+    background: #FFFFFF;
+    color: var(--color-primary);
+    border-color: var(--color-accent-sage);
 }

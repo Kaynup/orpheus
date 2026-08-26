@@ -1,66 +1,103 @@
 <!-- TAB 1: RAG Chat & Live Pipeline Inspector -->
 <section id="tab-chat" class="tab-pane active">
     <div class="chat-layout">
-        <!-- Left: Chat conversation stream -->
-        <div class="chat-main-panel">
-            <!-- Header Documents Ribbon -->
-            <div class="chat-docs-ribbon" id="chat-docs-ribbon">
-                <span class="chat-docs-label" id="chat-docs-label" title="View all documents in Documents tab">Documents:</span>
-                <div class="chat-docs-list" id="chat-docs-list">
-                    <span class="chat-docs-empty">None indexed yet</span>
+        <!-- Left Column: Chat Conversation (Top) + Model Orchestration (Bottom) -->
+        <div class="chat-left-column">
+            <!-- 1. Top Card: Chat conversation stream & input -->
+            <div class="chat-main-panel">
+                <!-- Header Documents Ribbon -->
+                <div class="chat-docs-ribbon" id="chat-docs-ribbon">
+                    <span class="chat-docs-label" id="chat-docs-label" title="View all documents in Documents tab">Documents:</span>
+                    <div class="chat-docs-list" id="chat-docs-list">
+                        <span class="chat-docs-empty">None indexed yet</span>
+                    </div>
                 </div>
+
+                <!-- Chat Messages Container -->
+                <div id="chat-messages" class="chat-messages-area">
+                    <div class="chat-message bot-message intro-message">
+                        <div class="message-header">
+                            <span class="message-time">Ready</span>
+                        </div>
+                        <div class="message-body">
+                            Welcome! I am <strong>Orpheus</strong>. I answer questions grounded
+                            strictly in your ingested documents, cite exact sources, and execute
+                            anti-hallucination guardrails if facts are missing.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Box with Split Submit / Top-K Button -->
+                <form id="chat-form" class="chat-input-form">
+                    <div class="input-wrapper">
+                        <input type="text" id="chat-input"
+                            placeholder="Ask a question about your indexed documents..." autocomplete="off"
+                            required>
+                        
+                        <!-- 80-20 Split Button Group for Ask + Top-K Selector -->
+                        <div class="split-btn-container">
+                            <button type="submit" id="chat-submit-btn" class="btn-split-main" title="Send question">
+                                <span class="btn-ask-text">Ask</span>
+                                <span class="top-k-badge" id="top-k-display-badge">k=3</span>
+                            </button>
+                            <button type="button" id="top-k-dropdown-trigger" class="btn-split-dropdown" title="Select Top-K Chunks" aria-haspopup="true" aria-expanded="false">
+                                <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                            <!-- Top-K Floating Dropdown Menu -->
+                            <div class="top-k-dropdown-menu" id="top-k-dropdown-menu">
+                                <div class="top-k-menu-header">Top-K Chunks</div>
+                                <button type="button" class="top-k-opt" data-val="1">1 chunk</button>
+                                <button type="button" class="top-k-opt" data-val="2">2 chunks</button>
+                                <button type="button" class="top-k-opt active" data-val="3">3 chunks</button>
+                                <button type="button" class="top-k-opt" data-val="5">5 chunks</button>
+                            </div>
+                            <!-- Hidden select element for JS / API synchronization -->
+                            <select id="chat-top-k" style="display: none;">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3" selected>3</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
             </div>
 
-            <!-- Chat Messages Container -->
-            <div id="chat-messages" class="chat-messages-area">
-                <div class="chat-message bot-message intro-message">
-                    <div class="message-header">
-                        <span class="message-time">Ready</span>
+            <!-- 2. Bottom Card: Model Orchestration -->
+            <div class="model-orchestration-card">
+                <div class="orchestration-header">
+                    <div class="orchestration-title-group">
+                        <span class="orchestration-label">Model Orchestration</span>
                     </div>
-                    <div class="message-body">
-                        Welcome! I am <strong>Orpheus</strong>. I answer questions grounded
-                        strictly in your ingested documents, cite exact sources, and execute
-                        anti-hallucination guardrails if facts are missing.
+                    <span class="orchestration-hint">LiteLLM Multi-Provider Dispatch</span>
+                </div>
+                <div class="orchestration-body">
+                    <!-- Custom Model Dropdown matching Ask button dropdown design -->
+                    <div class="model-custom-dropdown" id="model-custom-dropdown">
+                        <button type="button" id="model-dropdown-trigger" class="model-trigger-btn" aria-haspopup="true" aria-expanded="false">
+                            <div class="model-trigger-info">
+                                <span class="model-selected-name" id="model-selected-name">Offline Grounded Extractor</span>
+                                <span class="model-selected-badge" id="model-selected-badge">No Key Required</span>
+                            </div>
+                            <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="model-dropdown-menu" id="model-dropdown-menu">
+                            <!-- Dynamically populated based on available backend API keys -->
+                        </div>
+                        <!-- Hidden select element for JS / API synchronization -->
+                        <select id="chat-model-select" style="display: none;">
+                            <option value="offline" selected>Offline Grounded Extractor</option>
+                        </select>
                     </div>
                 </div>
             </div>
-
-            <!-- Chat Input Box -->
-            <form id="chat-form" class="chat-input-form">
-                <div class="input-wrapper">
-                    <input type="text" id="chat-input"
-                        placeholder="Ask a question about your indexed documents..." autocomplete="off"
-                        required>
-                    <button type="submit" id="chat-submit-btn" class="btn btn-primary">
-                        <span>Ask</span>
-                    </button>
-                </div>
-                <div class="chat-controls-row">
-                    <div class="control-group">
-                        <label for="chat-top-k">Top-K Chunks:</label>
-                        <select id="chat-top-k">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3" selected>3</option>
-                            <option value="5">5</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label for="chat-model-select">Model Orchestration:</label>
-                        <select id="chat-model-select">
-                            <option value="gemini/gemini-1.5-flash">Gemini 1.5 Flash</option>
-                            <option value="openrouter/google/gemini-flash-1.5">OpenRouter / Gemini Flash</option>
-                            <option value="openrouter/meta-llama/llama-3.1-8b-instruct">OpenRouter / Llama 3.1 8B</option>
-                            <option value="ollama/gemma3:1b">Ollama / Gemma 3 1B (Local)</option>
-                            <option value="ollama/llama3">Ollama / Llama 3 (Local)</option>
-                            <option value="offline" selected>Offline Grounded Extractor (No API Key Required)</option>
-                        </select>
-                    </div>
-                </div>
-            </form>
         </div>
 
-        <!-- Right: Live Pipeline Observability Inspector -->
+        <!-- Right Column: Live Pipeline Observability Inspector (Full Height Card) -->
         <div class="chat-inspector-panel">
             <div class="inspector-header">
                 <h3 class="inspector-title">Pipeline</h3>
@@ -110,29 +147,6 @@
                     <div class="step-content">
                         <div class="step-title">LLM Generation</div>
                         <div class="step-details">LiteLLM grounded synthesis</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Query Metrics Summary -->
-            <div class="inspector-metrics" id="inspector-metrics" style="display: none;">
-                <h4>Execution Diagnostics</h4>
-                <div class="metric-grid">
-                    <div class="metric-card">
-                        <span class="metric-label">Latency</span>
-                        <span class="metric-val" id="metric-latency">0 ms</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Retrieved Chunks</span>
-                        <span class="metric-val" id="metric-chunks">0</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Top Similarity</span>
-                        <span class="metric-val" id="metric-sim">0.000</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Tokens</span>
-                        <span class="metric-val" id="metric-tokens">0</span>
                     </div>
                 </div>
             </div>
