@@ -11,9 +11,9 @@
         <div>
             <h1 class="brand-title">Orpheus <span class="version-badge" id="app-version-badge">v{{ version }}</span>
             </h1>
-            <p class="brand-subtitle">Chat with context of sources • Enter your documents with a click • Evaluate on
+            <!-- p class="brand-subtitle">Chat with context of sources • Enter your documents with a click • Evaluate on
                 ready-made or custom benchmark
-            </p>
+            </p -->
         </div>
     </div>
 
@@ -35,13 +35,14 @@
 
 <!-- Navigation Tabs -->
 <nav class="nav-tabs">
-    <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat">
+    <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat" data-tooltip="Chat with context of sources">
         Inference
     </button>
-    <button class="nav-tab" data-tab="tab-ingest" id="tab-btn-ingest">
+    <button class="nav-tab" data-tab="tab-ingest" id="tab-btn-ingest" data-tooltip="Enter your documents with a click">
         Documents (<span id="tab-doc-count">0</span>)
     </button>
-    <button class="nav-tab" data-tab="tab-eval" id="tab-btn-eval">
+    <button class="nav-tab" data-tab="tab-eval" id="tab-btn-eval"
+        data-tooltip="Evaluate on ready-made or custom benchmark">
         Evaluation
     </button>
 </nav>

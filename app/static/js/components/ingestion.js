@@ -162,11 +162,11 @@ export async function updateStatus() {
         if (data.vector_store && dbStatusText) {
             const totalChunks = data.vector_store.total_chunks || 0;
             const totalDocs = data.vector_store.total_documents || 0;
-            dbStatusText.textContent = `ChromaDB Ready (${totalChunks} chunks in ${totalDocs} docs)`;
+            dbStatusText.textContent = `(${totalChunks} chunks)`;
             if (tabDocCount) tabDocCount.textContent = totalDocs;
         }
     } catch (err) {
-        if (dbStatusText) dbStatusText.textContent = "ChromaDB Connecting...";
+        if (dbStatusText) dbStatusText.textContent = "(connecting...)";
     }
 }
 

@@ -145,6 +145,7 @@
 }
 
 .nav-tab {
+    position: relative;
     background: transparent;
     border: 1px solid transparent;
     border-bottom: 2px solid transparent;
@@ -157,6 +158,56 @@
     cursor: pointer;
     margin-bottom: -1px;
     transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Tooltip Popup */
+.nav-tab::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: var(--color-primary);
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 14px rgba(35, 45, 40, 0.18);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+                visibility 0.18s ease;
+    z-index: 100;
+}
+
+.nav-tab::before {
+    content: "";
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent var(--color-primary) transparent;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+                visibility 0.18s ease;
+    z-index: 101;
+}
+
+.nav-tab:hover::after,
+.nav-tab:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }
 
 .nav-tab:hover {
