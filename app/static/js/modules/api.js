@@ -1,5 +1,5 @@
 /**
- * Centralized REST & SSE Transport Client for Doc-QA Assistant
+ * Centralized REST & SSE Transport Client for Orpheus
  */
 
 export async function fetchStatus() {

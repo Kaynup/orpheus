@@ -85,9 +85,9 @@ UI_THEME = _load_cli_theme()
 
 
 def print_banner():
-    """Print the Doc-QA Assistant CLI header banner."""
+    """Print the Orpheus header banner."""
     banner_text = Text()
-    banner_text.append(f"(v{config.version})\n", style=UI_THEME["colors"]["success_color"])
+    banner_text.append(f"Orpheus (v{config.version})\n", style=UI_THEME["colors"]["success_color"])
     banner_text.append("Educational, transparent RAG system with persistent ChromaDB & LiteLLM", style="dim")
     console.print(Panel(banner_text, border_style=UI_THEME["colors"]["banner_border"], expand=False))
 
@@ -316,7 +316,7 @@ def handle_interactive(pipeline: RAGPipeline):
     bullet = UI_THEME["icons"]["bullet"]
     arrow = UI_THEME["icons"]["prompt_arrow"]
 
-    console.print(f"\n[{UI_THEME['colors']['info_color']}]Interactive Doc-QA Shell.[/{UI_THEME['colors']['info_color']}] Type your question, or commands:")
+    console.print(f"\n[{UI_THEME['colors']['info_color']}]Interactive Orpheus Shell.[/{UI_THEME['colors']['info_color']}] Type your question, or commands:")
     console.print(f"  [dim]{bullet} ':status'    - View vector store status[/dim]")
     console.print(f"  [dim]{bullet} ':eval'      - Run benchmark evaluation[/dim]")
     console.print(f"  [dim]{bullet} ':samples'   - Ingest sample documents[/dim]")
@@ -326,7 +326,7 @@ def handle_interactive(pipeline: RAGPipeline):
     inspect_prompt = False
     while True:
         try:
-            query = console.input(f"[bold green]doc-qa {arrow} [/bold green]").strip()
+            query = console.input(f"[bold green]orpheus {arrow} [/bold green]").strip()
             if not query:
                 continue
 
@@ -353,10 +353,10 @@ def handle_interactive(pipeline: RAGPipeline):
 def main():
     """Main CLI entrypoint."""
     parser = argparse.ArgumentParser(
-        description="Doc-QA Assistant CLI - Full GenAI Pipeline",
+        description="Orpheus: Full GenAI Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("-v", "--version", action="version", version=f"Doc-QA Assistant v{config.version}")
+    parser.add_argument("-v", "--version", action="version", version=f"Orpheus v{config.version}")
     subparsers = parser.add_subparsers(dest="command", help="Available CLI commands")
 
     # Ingest command

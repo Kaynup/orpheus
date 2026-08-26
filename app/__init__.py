@@ -1,4 +1,4 @@
-"""Doc-QA Assistant Application Package."""
+"""Orpheus Application Package."""
 
 import sys
 

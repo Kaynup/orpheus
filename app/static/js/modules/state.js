@@ -1,5 +1,5 @@
 /**
- * Shared Client State & Event Bus for Doc-QA Assistant
+ * Shared Client State & Event Bus for Orpheus
  */
 
 const listeners = new Map();

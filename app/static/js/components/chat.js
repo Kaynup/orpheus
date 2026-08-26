@@ -65,7 +65,7 @@ export function initChat() {
         botHeader.className = "message-header";
         const botSender = document.createElement("span");
         botSender.className = "message-sender";
-        botSender.textContent = "Doc-QA Assistant";
+        botSender.textContent = "Orpheus";
         const botTime = document.createElement("span");
         botTime.className = "message-time";
         botTime.textContent = "Processing...";

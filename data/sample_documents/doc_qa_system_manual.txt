@@ -1,8 +1,8 @@
-DOC-QA ASSISTANT: SYSTEM ARCHITECTURE AND RAG MANUAL
-======================================================
+ORPHEUS: SYSTEM ARCHITECTURE AND RAG MANUAL
+===========================================
 
 1. SYSTEM OVERVIEW
-The Doc-QA Assistant is an enterprise-grade Retrieval-Augmented Generation (RAG) system designed to answer complex user queries by synthesizing grounded facts from proprietary document corpora. The architecture decouples document ingestion, vector retrieval, and Large Language Model (LLM) generation into independent, scalable microservices.
+Orpheus is a Retrieval-Augmented Generation (RAG) system designed to answer user queries by synthesizing grounded facts from document corpora. The architecture decouples document ingestion, vector retrieval, and Large Language Model (LLM) generation into independent, scalable microservices.
 
 2. INGESTION AND CHUNKING PIPELINE
 When a document (TXT, PDF, or Markdown) is uploaded to the system, it is processed through the ingestion pipeline. 
@@ -12,7 +12,7 @@ Because LLMs have strict context window limits and struggle with "lost in the mi
 Semantic search is powered by transforming the text chunks into high-dimensional vector representations. 
 
 3.1 Embedding Model
-The system requires a dense embedding model that balances semantic accuracy with low latency. By default, the Doc-QA Assistant uses the `all-MiniLM-L6-v2` embedding model. This model projects semantic meaning into a 384-dimensional vector space. The combination of the lightweight MiniLM architecture and the 384 vector dimension allows the system to perform blazing-fast cosine similarity calculations across millions of chunks while maintaining robust contextual understanding.
+The system requires a dense embedding model that balances semantic accuracy with low latency. By default, Orpheus uses the `all-MiniLM-L6-v2` embedding model. This model projects semantic meaning into a 384-dimensional vector space. The combination of the lightweight MiniLM architecture and the 384 vector dimension allows the system to perform fast cosine similarity calculations across millions of chunks while maintaining robust contextual understanding.
 
 3.2 Vector Database
 The generated embeddings are stored in a persistent ChromaDB collection. Each vector payload includes crucial metadata: the source filename, the chunk index, and the document checksum. This metadata allows the retrieval engine to filter queries by document type and provide accurate source citations to the end user.

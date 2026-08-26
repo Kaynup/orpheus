@@ -1,4 +1,4 @@
-"""Configuration management for Doc-QA Assistant."""
+"""Configuration management for Orpheus."""
 
 from __future__ import annotations
 

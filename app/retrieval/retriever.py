@@ -1,4 +1,4 @@
-"""Semantic retrieval module for Doc-QA Assistant."""
+"""Semantic retrieval module for Orpheus."""
 
 from __future__ import annotations
 

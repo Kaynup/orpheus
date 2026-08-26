@@ -9,7 +9,7 @@
 
 ## 1. Overview & Architectural Role
 
-The **Document Ingestion & Validation Subsystem** is the entry gate for all knowledge entering the Doc-QA Assistant RAG system. It is responsible for accepting raw document files from the Flask REST/SSE API, web UI dropzone, or CLI, performing defensive security and validation checks, extracting clean text with structural page-level metadata, computing deduplication checksums, and generating a standardized `ParsedDocument` representation.
+The **Document Ingestion & Validation Subsystem** is the entry gate for all knowledge entering the Orpheus RAG system. It is responsible for accepting raw document files from the Flask REST/SSE API, web UI dropzone, or CLI, performing defensive security and validation checks, extracting clean text with structural page-level metadata, computing deduplication checksums, and generating a standardized `ParsedDocument` representation.
 
 In v0.2.0, this subsystem was completely refactored from a monolithic branching script into an **Open-Closed Principle (OCP) compliant Strategy Pattern** centered around `BaseDocumentParser` and a dynamic `PARSER_REGISTRY`.
 

@@ -1,4 +1,4 @@
-"""Flask Application entry point for Doc-QA Assistant."""
+"""Flask Application entry point for Orpheus."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def main():
         host = "127.0.0.1"
 
     port = config.server.port
-    logger.info("Starting Doc-QA Assistant Server on http://%s:%d", host, port)
+    logger.info("Starting Orpheus Server on http://%s:%d", host, port)
     app.run(host=host, port=port, debug=config.server.debug, threaded=True)
 
 

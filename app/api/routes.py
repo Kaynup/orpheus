@@ -1,4 +1,4 @@
-"""Flask API routes for Doc-QA Assistant with real-time SSE stream synchronization."""
+"""Flask API routes for Orpheus with real-time SSE stream synchronization."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def get_pipeline() -> RAGPipeline:
 
 @api_bp.route("/")
 def index():
-    """Render the single-page Doc-QA web application."""
+    """Render the single-page Orpheus web application."""
     return render_template("index.html", version=config.version)
 
 

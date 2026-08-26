@@ -1,6 +1,6 @@
-# Doc-QA Assistant (v0.2.0) — Core Functionalities & BRD Architecture Guide
+# Orpheus
 
-Welcome to the comprehensive technical documentation for the **Doc-QA Assistant (Mini RAG System)** v0.2.0 release. This documentation suite provides an in-depth, architectural breakdown of the entire RAG pipeline, directly mapped to the **Business Requirements Document (BRD)**.
+Welcome to the comprehensive technical documentation for the **Orpheus (Mini RAG System)** v0.2.0 release. This documentation suite provides an in-depth, architectural breakdown of the entire RAG pipeline, directly mapped to the **Business Requirements Document (BRD)**.
 
 ---
 

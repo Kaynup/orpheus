@@ -1,4 +1,4 @@
-"""Structured logging configuration for Doc-QA Assistant."""
+"""Structured logging configuration for Orpheus."""
 
 from __future__ import annotations
 

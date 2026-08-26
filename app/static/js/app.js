@@ -1,5 +1,5 @@
 /**
- * Doc-QA Assistant - Main Application Bootstrap & Tab Navigation Router
+ * Orpheus: Main Application Bootstrap & Tab Navigation Router
  * Strict XSS Prevention: All dynamic text is rendered via textContent and DOM APIs.
  */
 

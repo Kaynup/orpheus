@@ -85,7 +85,7 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
     ),
     EvaluationTestCase(
         test_id="EVAL-07",
-        question="Identify the embedding model and vector dimension used by the Doc-QA Assistant in exactly one sentence.",
+        question="Identify the embedding model and vector dimension used by Orpheus in exactly one sentence.",
         category="factual_single_doc",
         expected_keywords=["MiniLM", "384"],
         expected_source_files=["doc_qa_system_manual.txt"],

@@ -10,7 +10,7 @@
 
 ## 1. Overview & Architectural Role
 
-The **API, Web Interface & Event Streaming Subsystem** delivers the user-facing interfaces for the Doc-QA Assistant. It provides a RESTful Flask backend with real-time **Server-Sent Events (SSE)** streaming, a modern **hierarchical ES6 modular frontend**, **modular Jinja2 template partials**, **domain-driven component CSS stylesheets**, and a **Rich-themed CLI**.
+The **API, Web Interface & Event Streaming Subsystem** delivers the user-facing interfaces for Orpheus. It provides a RESTful Flask backend with real-time **Server-Sent Events (SSE)** streaming, a modern **hierarchical ES6 modular frontend**, **modular Jinja2 template partials**, **domain-driven component CSS stylesheets**, and a **Rich-themed CLI**.
 
 In v0.2.0, the subsystem underwent major architectural upgrades:
 1. **Pipeline Factory Dependency Injection**: API routes decoupled from singleton pipeline globals (`REFACTOR-API-02`).
