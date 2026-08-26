@@ -18,14 +18,14 @@ export function initEvaluation() {
 
     btnRunEval.addEventListener("click", async () => {
         btnRunEval.disabled = true;
-        btnRunEval.textContent = "Running Benchmark (10 Questions)...";
+        btnRunEval.textContent = "Running Benchmark...";
         evalTableBody.replaceChildren();
 
         const loadingRow = document.createElement("tr");
         const loadingCell = document.createElement("td");
         loadingCell.colSpan = 8;
         loadingCell.className = "text-center";
-        loadingCell.textContent = "Running benchmark evaluation suite against active ChromaDB store...";
+        loadingCell.textContent = "Running benchmark evaluation suite against active vector store...";
         loadingRow.appendChild(loadingCell);
         evalTableBody.appendChild(loadingRow);
 
