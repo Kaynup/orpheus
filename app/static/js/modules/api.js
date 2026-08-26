@@ -85,7 +85,12 @@ export async function streamQuery({ query, top_k, model }, callbacks) {
     await consumeSSEStream(response, callbacks);
 }
 
-export async function streamIngest(formData, callbacks) {
+export async function streamIngest(file, options, callbacks) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (options.chunk_size) formData.append("chunk_size", options.chunk_size);
+    if (options.chunk_overlap) formData.append("chunk_overlap", options.chunk_overlap);
+
     const response = await fetch("/api/ingest/stream", {
         method: "POST",
         body: formData,

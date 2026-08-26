@@ -86,7 +86,8 @@ export function initEvaluation() {
                 });
             }
         } catch (err) {
-            alert(`Evaluation failed: ${err}`);
+            console.error(`Evaluation failed: ${err}`);
+            evalOutput.innerHTML = `<div class="eval-error">Evaluation failed: ${err.message}</div>`;
         } finally {
             btnRunEval.disabled = false;
             btnRunEval.textContent = "Run Full Benchmark";

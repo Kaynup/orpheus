@@ -17,6 +17,7 @@ export function initIngestion() {
     const chunkSizeInput = document.getElementById("chunk-size-input");
     const chunkOverlapInput = document.getElementById("chunk-overlap-input");
     const btnUploadSubmit = document.getElementById("btn-upload-submit");
+    const btnIngestAnother = document.getElementById("btn-ingest-another");
     const uploadForm = document.getElementById("upload-form");
     const btnRefreshDocs = document.getElementById("btn-refresh-docs");
     const btnLoadSamples = document.getElementById("btn-load-samples");
@@ -29,7 +30,7 @@ export function initIngestion() {
         const validExts = [".txt", ".pdf"];
         const ext = "." + file.name.split(".").pop().toLowerCase();
         if (!validExts.includes(ext)) {
-            alert("Only .txt and .pdf files are supported.");
+            console.warn("Only .txt and .pdf files are supported.");
             return;
         }
 
@@ -37,6 +38,8 @@ export function initIngestion() {
         selectedFileName.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
         selectedFileInfo.style.display = "flex";
         btnUploadSubmit.disabled = false;
+        btnUploadSubmit.textContent = "Start Ingestion Pipeline";
+        if (btnIngestAnother) btnIngestAnother.disabled = true;
     }
 
     dropZone.addEventListener("click", () => fileInput.click());
@@ -69,7 +72,16 @@ export function initIngestion() {
         fileInput.value = "";
         selectedFileInfo.style.display = "none";
         btnUploadSubmit.disabled = true;
+        btnUploadSubmit.textContent = "Start Ingestion Pipeline";
+        if (btnIngestAnother) btnIngestAnother.disabled = true;
     });
+
+    if (btnIngestAnother) {
+        btnIngestAnother.addEventListener("click", () => {
+            btnClearFile.click();
+            fileInput.click();
+        });
+    }
 
     uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -77,11 +89,13 @@ export function initIngestion() {
 
         btnUploadSubmit.disabled = true;
         btnUploadSubmit.textContent = "Ingesting...";
+        if (btnIngestAnother) btnIngestAnother.disabled = true;
         resetIngestStepper();
 
         const chunkSize = parseInt(chunkSizeInput.value, 10) || 500;
         const chunkOverlap = parseInt(chunkOverlapInput.value, 10) || 50;
 
+        let success = false;
         try {
             await streamIngest(
                 activeFile,
@@ -93,18 +107,28 @@ export function initIngestion() {
                     onFinal: async (res) => {
                         await loadDocumentsList();
                         await updateStatus();
-                        alert(`Document '${res.filename}' indexed successfully into ${res.chunk_count} chunks!`);
+                        console.log(`Document '${res.filename}' indexed successfully into ${res.chunk_count} chunks!`);
+                        success = true;
+                        if (btnUploadSubmit) {
+                            btnUploadSubmit.disabled = true;
+                            btnUploadSubmit.textContent = "Indexed Successfully";
+                        }
+                        if (btnIngestAnother) {
+                            btnIngestAnother.disabled = false;
+                        }
                     },
                     onError: (err) => {
-                        alert(`Ingestion error: ${err}`);
+                        console.error(`Ingestion error: ${err}`);
+                        success = false;
                     },
                 });
             } catch (err) {
-                alert(`Upload failed: ${err}`);
+                console.error(`Upload failed: ${err}`);
+                success = false;
             } finally {
-                if (btnUploadSubmit) {
+                if (!success && btnUploadSubmit) {
                     btnUploadSubmit.disabled = false;
-                    btnUploadSubmit.textContent = "Start Ingestion Pipeline";
+                    btnUploadSubmit.textContent = "Retry Ingestion";
                 }
             }
         });
@@ -121,9 +145,9 @@ export function initIngestion() {
                 await loadSamples();
                 await loadDocumentsList();
                 await updateStatus();
-                alert("Sample documents ingested and persisted successfully!");
+                console.log("Sample documents ingested and persisted successfully!");
             } catch (err) {
-                alert("Failed to load samples: " + err);
+                console.error("Failed to load samples: " + err);
             } finally {
                 btnLoadSamples.disabled = false;
                 btnLoadSamples.textContent = "Load Samples";
@@ -138,9 +162,9 @@ export function initIngestion() {
                     await resetDatabase();
                     await loadDocumentsList();
                     await updateStatus();
-                    alert("Vector database collection reset successfully.");
+                    console.log("Vector database collection reset successfully.");
                 } catch (err) {
-                    alert("Failed to reset database: " + err);
+                    console.error("Failed to reset database: " + err);
                 }
             }
         });

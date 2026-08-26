@@ -39,9 +39,14 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="btn-upload-submit" class="btn btn-primary btn-block" disabled>
-                        Start Ingestion Pipeline
-                    </button>
+                    <div class="ingest-actions" style="display: flex; width: 100%;">
+                        <button type="submit" id="btn-upload-submit" class="btn btn-primary" style="width: 70%; border-radius: var(--radius-sm) 0 0 var(--radius-sm);" disabled>
+                            Start Ingestion Pipeline
+                        </button>
+                        <button type="button" id="btn-ingest-another" class="btn btn-secondary" style="width: 30%; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: 1px solid var(--bg-body);" disabled>
+                            Ingest Another
+                        </button>
+                    </div>
                 </form>
             </div>
 

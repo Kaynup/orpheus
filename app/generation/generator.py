@@ -129,6 +129,18 @@ class LLMGenerator:
         if model.lower().startswith("offline") or model.lower().startswith("mock"):
             return False
 
+        # If any variable containing _MODEL matches or exists in env
+        if any("_MODEL" in k and v and v.strip() for k, v in os.environ.items()):
+            # If the specific model is configured or if generic API keys exist
+            if "gemini" in model.lower():
+                return bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_MODEL"))
+            elif "openrouter" in model.lower():
+                return bool(os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_MODEL"))
+            elif "gpt" in model.lower() or "openai" in model.lower():
+                return bool(os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_MODEL"))
+            elif "ollama" in model.lower():
+                return True
+
         if "gemini" in model.lower():
             return bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
         elif "openrouter" in model.lower():
@@ -247,6 +259,50 @@ class LLMGenerator:
             is_offline_mode=True,
         )
 
+    def _prepare_completion_kwargs(
+        self,
+        target_model: str,
+        messages: list,
+        temperature: float,
+        max_tokens: int,
+        stream: bool = False,
+    ) -> tuple[str, dict]:
+        """Normalize model string and inject explicit API credentials for LiteLLM."""
+        m_str = target_model.strip()
+        if "/" not in m_str:
+            if "gemini" in m_str.lower():
+                m_str = f"gemini/{m_str}"
+            elif "gpt" in m_str.lower():
+                m_str = f"openai/{m_str}"
+
+        kwargs = {
+            "model": m_str,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": stream,
+        }
+
+        if "gemini" in m_str.lower():
+            key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or getattr(self.config, "gemini_api_key", None)
+            if key:
+                kwargs["api_key"] = key
+        elif "openrouter" in m_str.lower():
+            key = os.getenv("OPENROUTER_API_KEY") or getattr(self.config, "openrouter_api_key", None)
+            if key:
+                kwargs["api_key"] = key
+        elif "openai" in m_str.lower() or "gpt" in m_str.lower():
+            key = os.getenv("OPENAI_API_KEY") or getattr(self.config, "openai_api_key", None)
+            if key:
+                kwargs["api_key"] = key
+        elif "ollama" in m_str.lower():
+            kwargs["api_base"] = (
+                self.config.ollama_api_base
+                or os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
+            )
+
+        return m_str, kwargs
+
     def generate(
         self,
         prompt: AugmentedPrompt,
@@ -276,26 +332,19 @@ class LLMGenerator:
             },
         ]
 
+        actual_model, completion_kwargs = self._prepare_completion_kwargs(
+            target_model, messages, target_temp, target_max_tokens, stream=False
+        )
+
         logger.info(
-            "Calling LLM provider via LiteLLM: model=%s, temp=%.2f, max_tokens=%d",
+            "Calling LLM provider via LiteLLM: model=%s (actual=%s), temp=%.2f, max_tokens=%d",
             target_model,
+            actual_model,
             target_temp,
             target_max_tokens,
         )
 
         try:
-            completion_kwargs = {
-                "model": target_model,
-                "messages": messages,
-                "temperature": target_temp,
-                "max_tokens": target_max_tokens,
-            }
-            if "ollama" in target_model.lower():
-                completion_kwargs["api_base"] = (
-                    self.config.ollama_api_base
-                    or os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
-                )
-
             response = litellm.completion(**completion_kwargs)
 
             elapsed_ms = (time.perf_counter() - start_time) * 1000
@@ -371,13 +420,14 @@ class LLMGenerator:
         ]
 
         try:
-            stream = litellm.completion(
-                model=target_model,
-                messages=messages,
-                temperature=temperature or self.config.temperature,
-                max_tokens=max_tokens or self.config.max_tokens,
+            actual_model, completion_kwargs = self._prepare_completion_kwargs(
+                target_model,
+                messages,
+                temperature or self.config.temperature,
+                max_tokens or self.config.max_tokens,
                 stream=True,
             )
+            stream = litellm.completion(**completion_kwargs)
             for chunk in stream:
                 delta = chunk.choices[0].delta.content or ""
                 if delta:

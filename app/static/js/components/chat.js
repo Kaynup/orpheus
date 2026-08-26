@@ -260,6 +260,13 @@ export function initChat() {
 
                         updateDiagnosticMetrics(res);
 
+                        if (res.generation && (res.generation.model === "offline-grounded-fallback" || res.generation.is_offline_mode)) {
+                            const offlineBtn = document.querySelector('.model-opt-item[data-model-id="offline"]');
+                            if (offlineBtn && !offlineBtn.classList.contains("active")) {
+                                offlineBtn.click();
+                            }
+                        }
+
                         // Render Citations
                         if (res.citations && res.citations.length > 0 && !res.is_refusal) {
                             const citationsList = document.createElement("div");
