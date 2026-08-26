@@ -1,12 +1,11 @@
 <!-- TAB 2: Document Ingestion & Knowledge Base -->
 <section id="tab-ingest" class="tab-pane">
     <div class="ingest-layout">
-        <!-- Left: Upload zone & chunk config -->
-        <div class="ingest-upload-panel">
+        <!-- Left: Upload zone & Indexed Documents (60% width) -->
+        <div class="ingest-left-panel">
             <div class="panel-card">
                 <h3>Ingest Documents</h3>
-                <p class="panel-subtitle">Upload .txt or .pdf files to parse, chunk, embed, and store into
-                    ChromaDB.</p>
+                <p class="panel-subtitle">Upload .txt or .pdf files to parse, chunk, embed, and store into ChromaDB.</p>
 
                 <form id="upload-form" class="upload-form">
                     <div class="drop-zone" id="drop-zone">
@@ -19,8 +18,7 @@
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
                         </div>
-                        <p class="drop-text">Drag & drop files here, or <span
-                                class="browse-link">browse</span></p>
+                        <p class="drop-text">Drag & drop files here, or <span class="browse-link">browse</span></p>
                         <span class="drop-hint">Supported formats: .txt, .pdf (Max: 10MB)</span>
                         <input type="file" id="file-input" accept=".txt,.pdf" style="display: none;">
                     </div>
@@ -33,13 +31,11 @@
                     <div class="config-grid">
                         <div class="config-item">
                             <label for="chunk-size-input">Chunk Size (chars):</label>
-                            <input type="number" id="chunk-size-input" value="500" min="100" max="2000"
-                                step="50">
+                            <input type="number" id="chunk-size-input" value="500" min="100" max="2000" step="50">
                         </div>
                         <div class="config-item">
                             <label for="chunk-overlap-input">Chunk Overlap (chars):</label>
-                            <input type="number" id="chunk-overlap-input" value="50" min="0" max="500"
-                                step="10">
+                            <input type="number" id="chunk-overlap-input" value="50" min="0" max="500" step="10">
                         </div>
                     </div>
 
@@ -49,10 +45,31 @@
                 </form>
             </div>
 
-            <!-- Live Ingestion Pipeline Stepper -->
-            <div class="panel-card mt-4" id="ingestion-stepper-card">
-                <h3>Ingestion Pipeline Stepper</h3>
-                <p class="panel-subtitle">Real-time backend progress during indexing.</p>
+            <!-- Indexed Documents List (Horizontally Scrollable) -->
+            <div class="panel-card mt-4 ingest-docs-panel">
+                <div class="docs-header">
+                    <div>
+                        <h3>Indexed Documents</h3>
+                        <p class="panel-subtitle">Knowledge base persisted in ChromaDB.</p>
+                    </div>
+                    <button id="btn-refresh-docs" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+
+                <div class="documents-scroll-container">
+                    <div id="documents-list-container" class="documents-list">
+                        <div class="empty-state">No documents indexed yet. Ingest a document or click 'Load Samples' above.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Ingestion Pipeline Stepper (40% width) -->
+        <div class="ingest-right-panel">
+            <div class="panel-card ingestion-inspector-panel" id="ingestion-stepper-card">
+                <div class="inspector-header">
+                    <h3 class="inspector-title">Pipeline</h3>
+                </div>
+                <p class="inspector-desc">Real-time backend progress during indexing.</p>
 
                 <div class="pipeline-stepper" id="ingest-stepper">
                     <div class="step-item" id="istep-doc-received">
@@ -90,24 +107,6 @@
                             <div class="step-details">Persistent ChromaDB storage</div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right: Indexed Documents List -->
-        <div class="ingest-docs-panel">
-            <div class="panel-card">
-                <div class="docs-header">
-                    <div>
-                        <h3>Indexed Documents</h3>
-                        <p class="panel-subtitle">Knowledge base persisted in ChromaDB.</p>
-                    </div>
-                    <button id="btn-refresh-docs" class="btn btn-secondary btn-sm">Refresh</button>
-                </div>
-
-                <div id="documents-list-container" class="documents-list">
-                    <div class="empty-state">No documents indexed yet. Ingest a document or click 'Load
-                        Samples' above.</div>
                 </div>
             </div>
         </div>
