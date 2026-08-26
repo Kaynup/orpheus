@@ -2,195 +2,815 @@
 v0.2.0 Release Changelog
 =============================
 
-This changelog provides a comprehensive, detailed architectural record of all features, refactorings, modularizations, and bug fixes introduced across the v0.2.0 development cycle.
+This changelog provides a comprehensive, detailed architectural record of all
+features, refactorings, modularizations, security hardening, and bug fixes
+introduced across the v0.2.0 development cycle (``v0.1.0`` → ``v0.1.5``).
+Every entry maps directly to code changes verified in the ``git_diff_for_changelog.log``
+diff produced from ``v0.1.0``…``HEAD``.
 
+
+Version Bump
+============
+
+* Application version updated from ``0.1.0`` to ``0.1.5`` in ``app/version.py``
+  (``__version__``, ``__version_info__``). This version string is dynamically
+  surfaced by the ``/api/status`` endpoint and rendered in the frontend version
+  badge (``#app-version-badge``).
+
+
+----
 
 Ingestion & Storage Subsystem
-=============================
+==============================
 
 Added
 -----
-* **Document Parser Strategy Pattern & Extensible Registry** (``app/ingestion/parser.py``, ``app/ingestion/__init__.py``):
-  - Abstracted document parsing behind ``BaseDocumentParser`` with an abstract ``parse(file_path: Path) -> ParsedDocument`` interface.
-  - Implemented concrete parser strategies:
-    * ``TXTDocumentParser``: Plain text reader with UTF-8 encoding fallback and deterministic UUID5 identification based on file checksum.
-    * ``PDFDocumentParser``: Multi-page PDF extraction engine with per-page text aggregation and character counting using ``pypdf``.
-  - Established a centralized ``PARSER_REGISTRY`` dictionary mapping file extensions (``.txt``, ``.pdf``) to parser strategy instances. New document format parsers can be registered dynamically without modifying core parsing dispatch logic (Open-Closed Principle).
-  - Maintained backward-compatible wrapper functions ``parse_txt()``, ``parse_pdf()``, and ``parse_document()``.
-* **Decoupled Token Estimation Engine** (``app/chunking/tokenizer.py``, ``app/chunking/__init__.py``):
-  - Created a dedicated ``estimate_tokens(text: str) -> int`` utility, isolating token estimation heuristics (character count heuristics with minimum non-empty bounds) from chunk splitting logic.
-  - Formed a clean architectural seam enabling future pluggable tokenizers (such as ``tiktoken`` or HuggingFace tokenizers).
-* **Configurable Document Ingestion & Storage Settings** (``app/config.py``, ``.env.example``):
-  - ``RAG_ALLOWED_EXTENSIONS``: Configurable comma-separated list of permitted file extensions (defaults to ``.txt,.pdf``).
-  - ``RAG_MAX_FILE_SIZE_MB``: Configurable maximum document upload size in megabytes (defaults to 10 MB, stored as ``max_file_size_bytes``).
-  - ``RAG_HASH_BUFFER_SIZE``: Configurable read buffer size for streaming SHA-256 file checksum calculation (defaults to 65,536 bytes).
-  - ``RAG_CHUNK_SEPARATORS``: JSON-encoded array specifying the hierarchical separator fallback sequence for recursive text chunking.
-  - ``CHROMA_DISTANCE_METRIC``: Configurable vector space metric (``cosine``, ``l2``, ``ip``) matching collection geometry.
-  - ``CHROMA_BATCH_SIZE``: Configurable chunk insertion batch limit (defaults to 1000) to prevent SQLite parameter threshold exhaustion.
-* **Unit Test Suite for Chunking and Token Estimation** (``tests/test_chunking.py``):
-  - Comprehensive unit test suite validating ``RecursiveTextSplitter``, custom separator sequences, overlap constraints, and ``estimate_tokens()`` behavior.
+
+* **Document Parser Strategy Pattern & Extensible Registry**
+  (``app/ingestion/parser.py``, ``app/ingestion/__init__.py``):
+
+  - Introduced ``BaseDocumentParser`` abstract base class (via ``abc.ABC``)
+    with a single abstract method ``parse(file_path: Path) -> ParsedDocument``.
+    All format-specific parsing logic is encapsulated in concrete strategy
+    subclasses, eliminating the hardcoded ``if ext == ".txt" … elif ext == ".pdf"``
+    dispatch (``REFACTOR-INGEST-04``).
+
+  - Implemented two concrete parser strategies:
+
+    * ``TXTDocumentParser``: Reads plain text files with ``encoding="utf-8"``
+      and ``errors="replace"`` fallback. Computes a deterministic ``UUID5``
+      document identifier from the file's SHA-256 checksum, extracts the
+      stripped full text as a single page, and records ``line_count`` and
+      ``encoding`` in the document metadata dictionary.
+
+    * ``PDFDocumentParser``: Iterates over every page via ``pypdf.PdfReader``,
+      strips extracted page text, accumulates ``total_chars`` across all pages,
+      rejects zero-page PDFs with a ``DocumentParsingError``, and stores
+      ``page_count`` in the document metadata dictionary.
+
+  - Established ``PARSER_REGISTRY: Dict[str, BaseDocumentParser]`` mapping
+    file extensions (``".txt"``, ``".pdf"``) to singleton parser instances.
+    The ``parse_document()`` dispatcher performs a registry lookup by
+    extension; unknown extensions raise a descriptive ``DocumentParsingError``
+    listing all registered formats. New format support (e.g. ``.md``, ``.docx``,
+    ``.csv``) requires only one line: ``PARSER_REGISTRY[".new"] = NewParser()``.
+    (Open-Closed Principle compliance.)
+
+  - Maintained backward-compatible module-level wrapper functions ``parse_txt()``
+    and ``parse_pdf()`` delegating to their respective registry strategies.
+    Updated ``parse_document()`` to call
+    ``validate_file(path, allowed_extensions=set(PARSER_REGISTRY.keys()))``
+    so the allowed extension set is always in sync with registered parsers.
+
+  - Expanded ``app/ingestion/__init__.py`` public API to export
+    ``BaseDocumentParser``, ``PARSER_REGISTRY``, ``TXTDocumentParser``,
+    ``PDFDocumentParser``, ``parse_txt``, and ``parse_pdf``.
+
+* **Decoupled Token Estimation Engine**
+  (``app/chunking/tokenizer.py``, ``app/chunking/__init__.py``):
+
+  - Created ``app/chunking/tokenizer.py`` exporting ``estimate_tokens(text: str) -> int``.
+  - The estimator uses the standard ``len(text) // 4`` heuristic, returning ``0``
+    for empty strings and ``max(1, ...)`` for non-empty inputs (minimum 1 token).
+  - Module docstring explicitly marks this as an architectural seam for future
+    swap-in of ``tiktoken`` or HuggingFace tokenizers.
+  - Re-exported through ``app/chunking/__init__.py`` ``__all__``.
+
+* **Configurable Document Ingestion & Storage Settings**
+  (``app/config.py``, ``.env.example``):
+
+  ``StorageConfig`` extended:
+
+  - ``allowed_extensions: List[str]`` — from ``RAG_ALLOWED_EXTENSIONS``
+    (default ``".txt,.pdf"``).
+  - ``max_file_size_bytes: int`` — from ``RAG_MAX_FILE_SIZE_MB`` (default 10 MB).
+  - ``hash_buffer_size: int`` — from ``RAG_HASH_BUFFER_SIZE`` (default 65,536 bytes).
+  - ``distance_metric: str`` — from ``CHROMA_DISTANCE_METRIC`` (default ``"cosine"``;
+    accepts ``"l2"`` or ``"ip"``).
+  - ``batch_size: int`` — from ``CHROMA_BATCH_SIZE`` (default 1000) to prevent
+    SQLite variable threshold exhaustion.
+
+  ``ChunkConfig`` extended:
+
+  - ``separators: List[str]`` — from ``RAG_CHUNK_SEPARATORS`` as a JSON array.
+    Invalid JSON falls back to the standard ``["\n\n", "\n", ". ", " ", ""]``
+    sequence.
+
+  ``LLMConfig`` extended:
+
+  - ``suppress_debug_info: bool`` — from ``LLM_DEBUG_INFO=false``
+    (default suppressed).
+  - ``offline_topic_threshold: float`` — from ``LLM_OFFLINE_TOPIC_THRESHOLD``
+    (default 0.4).
+  - ``offline_max_sentences: int`` — from ``LLM_OFFLINE_MAX_SENTENCES``
+    (default 4).
+
+  ``ServerConfig`` extended:
+
+  - ``cors_origins: List[str]`` — from ``CORS_ORIGINS`` (defaults to the four
+    standard localhost development origins).
+
+  All new variables fully documented in ``.env.example``.
+
+* **Unit Test Suite for Chunking and Token Estimation**
+  (``app/chunking/tests/test_chunking.py``):
+
+  - Extended suite validating ``RecursiveTextSplitter``, custom separator
+    sequences, overlap constraints, ``estimate_tokens()`` boundary conditions,
+    and configurable separator injection.
 
 Changed / Refactored
---------------------
-* **Validation Submodule Decoupling & Dynamic Thresholds** (``app/ingestion/validator.py``):
-  - Eliminated hardcoded module-level constants (``MAX_FILE_SIZE_BYTES``, ``ALLOWED_EXTENSIONS``).
-  - Refactored ``validate_file()`` to dynamically resolve limits from ``config.storage.max_file_size_bytes`` and ``config.storage.allowed_extensions`` while supporting explicit per-call argument overrides.
-* **Config-Driven Recursive Text Splitting** (``app/chunking/text_splitter.py``):
-  - Refactored ``RecursiveTextSplitter`` to consume hierarchical separator lists from ``ChunkConfig.separators`` instead of hardcoded strings.
-  - Integrated ``estimate_tokens()`` for chunk-level token estimates.
-* **Dynamic Embedding Model Resolution & Metric Abstractions** (``app/embedding/embedder.py``):
-  - Enhanced ``EmbeddingManager`` to dynamically resolve embedding functions based on ``model_name``.
-  - Exposed explicit model properties: ``dimension`` (vector dimension, default 384) and ``distance_metric`` (resolved from storage configuration).
-  - Added unified ``distance_to_similarity(distance: float) -> float`` conversion helper mapping raw distance to normalized ``[0.0, 1.0]`` similarity across Cosine, Inner Product (IP), and Euclidean (L2) spaces.
-* **Metric-Agnostic Vector Storage & Chunk Batching Loop** (``app/storage/vector_store.py``):
-  - Configured ChromaDB collections with dynamic HNSW space metadata (``metadata={"hnsw:space": self.embedding_manager.distance_metric}``) on initialization and collection reset.
-  - Replaced hardcoded cosine similarity math with ``self.embedding_manager.distance_to_similarity(dist)`` in query result formatting.
-  - Implemented safe paginated batch insertion in ``add_chunks()`` looping over chunks in increments of ``config.storage.batch_size`` (default 1000) with detailed logging.
+---------------------
+
+* **Validation Submodule Decoupling & Dynamic Thresholds**
+  (``app/ingestion/validator.py``):
+
+  - Removed hardcoded module-level constants ``MAX_FILE_SIZE_BYTES`` and
+    ``ALLOWED_EXTENSIONS`` (``FIX-INGEST-01``, ``REFACTOR-INGEST-02``).
+  - ``validate_file()`` signature updated to
+    ``validate_file(file_path, max_bytes=None, allowed_extensions=None)``.
+    Both optional parameters fall back to live configuration values when not
+    provided, allowing per-call override for isolated testing.
+  - Error messages dynamically embed the effective byte limit and effective
+    extension set.
+
+* **Config-Driven Recursive Text Splitting**
+  (``app/chunking/text_splitter.py``):
+
+  - ``RecursiveTextSplitter.__init__()`` resolves the separator list as
+    ``separators if separators is not None else config.chunk.separators``
+    instead of a hardcoded Python list literal (``REFACTOR-CHUNK-01``).
+  - ``token_count_estimate`` field on ``TextChunk`` now computed via
+    ``estimate_tokens(piece_clean)`` (``REFACTOR-CHUNK-02``).
+
+* **Dynamic Embedding Model Resolution & Metric Abstractions**
+  (``app/embedding/embedder.py``):
+
+  - ``EmbeddingManager`` now branches on ``model_name``; the
+    ``"all-MiniLM-L6-v2"`` path instantiates ``DefaultEmbeddingFunction()``
+    explicitly (``FIX-EMBED-01``).
+  - Added ``dimension`` property returning vector dimension (384 for MiniLM).
+  - Added ``distance_metric`` property reading from
+    ``config.storage.distance_metric``.
+  - Added ``distance_to_similarity(distance: float) -> float`` implementing
+    metric-specific conversion:
+
+    * Cosine / IP: ``max(0.0, 1.0 - distance)``
+    * L2 (Euclidean): ``1.0 / (1.0 + distance)``
+    * Unknown: cosine fallback.
+
+* **Metric-Agnostic Vector Storage & Chunk Batching Loop**
+  (``app/storage/vector_store.py``):
+
+  - Collection initialization and ``reset_collection()`` both use
+    ``metadata={"hnsw:space": self.embedding_manager.distance_metric}``
+    (``FIX-STORE-01``).
+  - Similarity scoring replaced with
+    ``self.embedding_manager.distance_to_similarity(float(distance))``
+    (``REFACTOR-STORE-02``).
+  - ``add_chunks()`` persists embeddings in a paginated batch loop using
+    ``config.storage.batch_size`` (``REFACTOR-STORE-03``).
 
 Fixed
 -----
-* Eliminated rigid file size validation and extension restrictions across document ingestion routines.
-* Removed hardcoded 64 KB magic number in ``compute_sha256()``, replacing it with configurable buffer sizing.
-* Fixed hardcoded cosine distance assumptions in vector retrieval scoring.
 
+* ``FIX-INGEST-01`` — File size validation no longer silently enforces a
+  hardcoded 10 MB cap.
+* ``FIX-INGEST-03`` — ``compute_sha256()`` reads in configurable buffer chunks;
+  optional ``buffer_size`` argument also supported.
+* ``FIX-STORE-01`` — ChromaDB HNSW space metadata derived dynamically from
+  the embedding manager.
+* ``FIX-EMBED-01`` — ``model_name`` inspection guards against silent mismatches
+  between the config model name and the underlying embedding function.
+
+
+----
 
 Retrieval, Generation & CLI Subsystem
-=====================================
+=======================================
 
 Added
 -----
-* **Versioned External Prompt Asset Management** (``assets/prompts/``, ``app/augmentation/prompt_builder.py``):
-  - Extracted hardcoded system instructions into ``assets/prompts/system-prompts/v1_system_instruction_001.txt``.
-  - Extracted user query template into ``assets/prompts/full-prompt-templates/v1_user_query_template_001.txt``.
-  - Implemented ``_load_asset()`` in ``PromptBuilder`` with fail-fast file validation, while maintaining optional constructor parameter overrides for testing.
-  - Cleaned up ``app/augmentation/__init__.py`` to remove deprecated prompt string exports.
-* **Externalized NLP & Generation Assets** (``assets/configs/``, ``app/generation/generator.py``):
-  - ``assets/configs/generation_texts.json``: Externalized standard refusal response message, refusal detection signatures, and provider fallback note templates.
-  - ``assets/configs/nlp_stopwords.json``: Externalized NLP stop words and generic domain anchor terms used for topic keyword filtering.
-  - Implemented robust ``_load_json_asset()`` loader with fail-fast validation.
-* **Centralized CLI Theme & Glyph Tokens** (``assets/configs/cli_theme.json``, ``cli.py``):
-  - Centralized terminal styling tokens, status icons (``⏳``, ``⚡``, ``✔``, ``✖``, ``•``, ``›``), table border styles, and alert colors in ``assets/configs/cli_theme.json``.
-  - Implemented resilient fallback loader ``_load_cli_theme()`` in ``cli.py``.
-* **Configurable LLM Telemetry & Offline Response Controls** (``app/config.py``, ``.env.example``):
-  - ``LLM_DEBUG_INFO``: Boolean environment variable to toggle verbose LiteLLM telemetry and debugging info dynamically.
-  - ``LLM_OFFLINE_TOPIC_THRESHOLD``: Configurable relevance ratio for offline topic matching (defaults to 0.4).
-  - ``LLM_OFFLINE_MAX_SENTENCES``: Configurable response sentence limit for offline generation (defaults to 4).
+
+* **Versioned External Prompt Asset Management**
+  (``assets/prompts/``, ``app/augmentation/prompt_builder.py``):
+
+  - Extracted system instruction into
+    ``assets/prompts/system-prompts/v1_system_instruction_001.txt``
+    (5-rule grounded answering contract with citation and anti-hallucination
+    guardrails).
+  - Extracted user query template into
+    ``assets/prompts/full-prompt-templates/v1_user_query_template_001.txt``
+    with ``{formatted_context}`` and ``{query}`` placeholders.
+  - Added ``_load_asset(path: Path) -> str`` in ``prompt_builder.py`` with
+    fail-fast ``FileNotFoundError`` including the missing path and remediation
+    message.
+  - ``PromptBuilder.__init__()`` loads both assets at instantiation; optional
+    ``system_instruction`` constructor parameter overrides for testing.
+  - Removed deprecated ``SYSTEM_INSTRUCTION`` export from
+    ``app/augmentation/__init__.py``.
+
+* **Externalized NLP & Generation Assets**
+  (``assets/configs/``, ``app/generation/generator.py``):
+
+  - ``assets/configs/generation_texts.json``:
+
+    * ``standard_refusal`` — canonical refusal message (previously hardcoded
+      at two call sites).
+    * ``fallback_provider_note`` — provider fallback annotation template with
+      ``{error}`` placeholder.
+    * ``refusal_signatures`` — list of lowercase refusal-detection substrings.
+
+  - ``assets/configs/nlp_stopwords.json``:
+
+    * ``stopwords`` — ~70 common English stop words for offline topic extraction.
+    * ``anchor_terms`` — generic domain words excluded from topic-word matching.
+
+  - Added ``_load_json_asset(path: Path) -> Dict[str, Any]`` with fail-fast
+    ``FileNotFoundError`` semantics.
+  - Module-level constants ``DEFAULT_REFUSAL_TEXT``, ``REFUSAL_SIGNATURES``,
+    ``FALLBACK_PROVIDER_NOTE_TEMPLATE``, ``STOPWORDS``, ``ANCHOR_TERMS``
+    populated by parsing these JSON assets at import time.
+
+* **Centralized CLI Theme & Glyph Tokens**
+  (``assets/configs/cli_theme.json``, ``cli.py``):
+
+  - ``assets/configs/cli_theme.json`` with two top-level keys:
+
+    * ``icons`` — named glyph tokens: ``status_waiting`` (⏳),
+      ``status_running`` (⚡), ``status_completed`` (✔), ``status_failed`` (✖),
+      ``status_default`` (•), ``test_passed`` (✔), ``test_failed`` (✖),
+      ``bullet`` (•), ``prompt_arrow`` (›).
+    * ``colors`` — Rich console style strings per semantic role.
+
+  - ``_load_cli_theme()`` in ``cli.py`` loads the JSON asset with a full
+    in-code fallback dictionary.
+  - Module-level ``UI_THEME = _load_cli_theme()`` singleton drives all
+    Rich formatting calls.
+
+* **Configurable LLM Telemetry & Offline Response Controls**
+  (``app/config.py``, ``.env.example``):
+
+  - ``LLM_DEBUG_INFO`` — controls ``litellm.suppress_debug_info`` at runtime.
+  - ``LLM_OFFLINE_TOPIC_THRESHOLD`` — ratio for offline topic-word matching.
+  - ``LLM_OFFLINE_MAX_SENTENCES`` — caps offline extractive sentence count.
+
+* **Runtime Pydantic 2.13+ / LiteLLM Compatibility Shim**
+  (``app/generation/generator.py``):
+
+  - Injected ``ChatCompletionReasoningSummaryTextBlock`` stub into
+    ``litellm.types.utils`` when missing, preventing ``PydanticUserError``
+    on Pydantic v2 schema resolution.
+  - Calls ``model_rebuild()`` on ``Message``, ``Choices``, and
+    ``ModelResponse`` when available to force schema recompilation.
+  - Wrapped in bare ``except Exception: pass`` to never block startup.
 
 Changed / Refactored
---------------------
-* **Metric-Agnostic Retrieval Documentation** (``app/retrieval/retriever.py``):
-  - Removed hardcoded metric assumptions in semantic proximity threshold comments.
-* **Decoupled Generator Orchestration** (``app/generation/generator.py``):
-  - Configured ``litellm.suppress_debug_info`` dynamically from ``config.llm.suppress_debug_info``.
-  - Refactored offline fallback extraction to consume externalized stop words, anchor terms, configurable topic thresholds, and configurable sentence limits.
-* **Theme-Driven CLI Architecture** (``cli.py``):
-  - Refactored all banners, event listeners, summaries, question inspectors, and benchmark tables to render using ``UI_THEME`` tokens.
+---------------------
+
+* **Decoupled Generator Orchestration**
+  (``app/generation/generator.py``):
+
+  - ``litellm.suppress_debug_info`` set per-instance from config.
+  - Offline fallback threshold and sentence count read from config.
+  - Hardcoded ``stopwords`` / ``anchor_terms`` replaced by JSON-loaded
+    module-level constants.
+  - Refusal text, fallback note, and refusal signatures reference JSON assets.
+
+* **Metric-Agnostic Retrieval Comment Cleanup**
+  (``app/retrieval/retriever.py``):
+
+  - Replaced the misleading inline comment
+    ``# e.g., cosine distance <= 0.85`` with metric-agnostic language.
+
+* **Theme-Driven CLI Architecture**
+  (``cli.py``):
+
+  - All banners, event listeners, table borders, and benchmark icons replaced
+    with ``UI_THEME["colors"]`` / ``UI_THEME["icons"]`` lookups.
+  - Retrieved context table column renamed ``"Cosine Dist"`` → ``"Distance"``.
+  - Interactive REPL prompt arrow uses ``UI_THEME["icons"]["prompt_arrow"]``.
 
 Fixed
 -----
-* Fixed hardcoded telemetry suppression in LiteLLM orchestration (``FIX-GEN-01``).
-* Fixed hardcoded offline topic threshold and sentence length limits in fallback response generator (``FIX-GEN-04``, ``FIX-GEN-05``).
 
+* ``FIX-GEN-01`` — LiteLLM telemetry suppression is a configurable runtime
+  toggle.
+* ``FIX-GEN-04`` — Offline topic relevance threshold respects config.
+* ``FIX-GEN-05`` — Offline sentence count cap respects config.
+* ``REFACTOR-CLI-01`` — CLI theme/emoji literals centralized; missing Rich
+  closing-bracket markup errors resolved across all banners.
+
+
+----
 
 Web Interface & API Subsystem
-=============================
+==============================
 
 Added
 -----
-* **Flask-CORS Strict Localhost Whitelist Integration** (``app/api/security.py``, ``app/config.py``, ``requirements.txt``, ``.env.example``):
-  - Added ``flask-cors>=4.0.0`` dependency.
-  - Added ``cors_origins`` configuration to ``ServerConfig`` parsed from ``CORS_ORIGINS`` environment variable (defaults to ``http://127.0.0.1:5000``, ``http://localhost:5000``, ``http://127.0.0.1:3000``, ``http://localhost:3000``).
-  - Implemented ``setup_cors(app)`` scoping strict origins on ``r"/api/*"`` routes with ``supports_credentials=True``.
-  - Connected CORS middleware in ``create_app()`` in ``app/main.py``.
-* **Hierarchical ES6 Frontend JavaScript Architecture** (``app/static/js/``):
-  - Deconstructed monolithic 676-line ``app.js`` into modular ES6 modules and components:
-    * ``modules/api.js``: Centralized transport client for REST endpoints and Server-Sent Events (SSE) streaming readers (``streamQuery``, ``streamIngest``, ``fetchStatus``, ``fetchDocuments``, ``deleteDocument``, ``loadSamples``, ``resetDatabase``, ``runEvaluation``).
-    * ``modules/state.js``: Reactive pub-sub event bus and client state manager (``state``, ``on``, ``emit``).
-    * ``components/modal.js``: Reusable modal dialog controller for prompt and context chunk inspection.
-    * ``components/inspector.js``: Real-time pipeline vertical steppers (running, completed, failed states) and diagnostic metrics panel.
-    * ``components/chat.js``: Chat feed manager, streaming response consumer, suggestion chips, and source citation pill renderer.
-    * ``components/ingestion.js``: Drag-and-drop file upload, chunking configuration inputs, indexed document card list, and sample loader.
-    * ``components/evaluation.js``: Benchmark execution trigger, summary metrics card updates, and diagnostic results table renderer.
-    * ``app.js``: Clean application bootstrap entrypoint and tab navigation router.
-* **Modular Jinja2 Template Partials & Base Layout** (``templates/``):
-  - Deconstructed monolithic 422-line ``index.html`` into structured Jinja2 partials:
-    * ``base.html``: Clean HTML5 base shell with typography, stylesheets, and Jinja2 blocks (``title``, ``head``, ``content``, ``scripts``).
-    * ``partials/header.html``: Navbar branding, dynamic version badge, status indicator, sample/reset actions, and navigation tabs.
-    * ``partials/tab_chat.html``: Chat interface, suggestion chips, message feed, and live QA pipeline inspector.
-    * ``partials/tab_ingestion.html``: Ingestion upload zone, parameter inputs, stepper, and indexed document list.
-    * ``partials/tab_evaluation.html``: Benchmark execution header, 5-metric summary grid, and diagnostic results table.
-    * ``partials/modal_inspector.html``: Reusable inspector details modal dialog.
-    * ``index.html``: Container template extending ``base.html`` and including partials.
-* **Domain-Driven Component CSS Architecture** (``app/static/css/``):
-  - Decomposed monolithic 978-line ``style.css`` into focused, domain-driven stylesheets imported via ``style.css``:
-    * ``base.css``: Earthy color palette tokens (``:root``), CSS reset, and typography.
-    * ``layout.css``: App container, header branding, navigation tabs, panels, and button utilities.
-    * ``components/chat.css``: Chat layout, message bubbles, citation pills, and input controls.
-    * ``components/inspector.css``: Stepper timeline, running/completed/failed states, and diagnostic metrics grid.
-    * ``components/ingestion.css``: Drag-and-drop dropzone, upload info, and document cards.
-    * ``components/evaluation.css``: Benchmark cards, diagnostic results table, and pass/fail badges.
-    * ``components/modal.css``: Modal backdrop and dialog cards.
-    * ``style.css``: Master stylesheet orchestrating modular ``@import`` rules.
+
+* **Flask-CORS Strict Localhost Whitelist Integration**
+  (``app/api/security.py``, ``app/config.py``, ``app/main.py``,
+  ``requirements.txt``, ``.env.example``):
+
+  - Added ``flask-cors>=4.0.0`` to ``requirements.txt``.
+  - Implemented ``setup_cors(app, allowed_origins=None)`` in
+    ``app/api/security.py``. CORS scoped exclusively to ``r"/api/*"`` with
+    ``supports_credentials=True``. Logs origins at ``INFO`` level; skips
+    attachment with a warning when ``flask_cors`` is not installed (resilient
+    import guard).
+  - ``setup_cors()`` wired into ``create_app()`` immediately after
+    ``setup_security_headers(app)``.
+  - Default allowed origins: ``http://127.0.0.1:5000``,
+    ``http://localhost:5000``, ``http://127.0.0.1:3000``,
+    ``http://localhost:3000``. Overridden via ``CORS_ORIGINS`` env variable.
+
+* **Hierarchical ES6 Frontend JavaScript Architecture**
+  (``app/static/js/``):
+
+  Deconstructed a monolithic 676-line ``app.js`` into modular ES6 components
+  (``REFACTOR-UI-01``):
+
+  - ``modules/api.js`` — Centralized REST and SSE transport client:
+
+    * Exports: ``fetchStatus``, ``fetchDocuments``, ``deleteDocument``,
+      ``loadSamples``, ``resetDatabase``, ``runEvaluation``, ``streamQuery``,
+      ``streamIngest``.
+    * Private ``consumeSSEStream(response, { onEvent, onFinal, onError })``:
+      incrementally decodes ``ReadableStream`` bytes, splits on ``"\n\n"``
+      SSE event boundaries, strips ``"data: "`` prefix, parses JSON,
+      dispatches ``payload.event``, ``payload.__FINAL_RESULT__``, and
+      ``payload.__ERROR__`` to caller callbacks.
+
+  - ``modules/state.js`` — Reactive pub-sub event bus and client state:
+
+    * Exports a shared ``state`` object (``activeFile``, ``documentCount``,
+      ``version``) plus ``on(event, callback)`` and ``emit(event, data)``
+      backed by a ``Map`` of listener arrays.
+
+  - ``components/modal.js`` — Reusable modal dialog controller:
+
+    * Exports: ``initModal()``, ``showModal(title, contentElement)``,
+      ``hideModal()``. Handles close-on-backdrop-click and close-button
+      binding.
+
+  - ``components/inspector.js`` — Real-time pipeline stepper & metrics:
+
+    * Exports: ``resetQAStepper()``, ``updateQAStep()``,
+      ``resetIngestStepper()``, ``updateIngestStep()``,
+      ``updateDiagnosticMetrics(res)``.
+    * Stage-to-element-ID maps (``QA_STAGE_MAP``, ``INGEST_STAGE_MAP``)
+      defined as module-level constants.
+    * ``updateDiagnosticMetrics`` reads ``res.retrieved_chunks``,
+      ``res.generation.total_tokens``, ``res.duration_ms``, and top
+      chunk similarity with null-safe guards.
+
+  - ``components/chat.js`` — Chat feed and streaming query consumer:
+
+    * Exports: ``initChat()``.
+    * Handles suggestion chip clicks, user message DOM insertion, bot
+      placeholder creation, ``streamQuery`` delegation with
+      ``onEvent``/``onFinal``/``onError`` callbacks, citation pill
+      rendering, and ``showModal``-based chunk/prompt inspection buttons.
+    * All user-controlled text inserted via ``.textContent`` (XSS-safe).
+
+  - ``components/ingestion.js`` — Drag-and-drop upload manager:
+
+    * Exports: ``initIngestion()``, ``updateStatus()``,
+      ``loadDocumentsList()``.
+    * Handles drop-zone hover/dragover/drop/click events, file selection,
+      chunking config inputs, ``streamIngest`` SSE pipeline stepper updates,
+      per-document card rendering with metadata, and delete confirmation.
+
+  - ``components/evaluation.js`` — Benchmark execution and results table:
+
+    * Exports: ``initEvaluation()``.
+    * Renders loading placeholder row, calls ``runEvaluation()``, updates
+      5 summary metric cards, and builds ``<tr>`` rows for each test result.
+
+  - ``app.js`` — DOMContentLoaded bootstrap entrypoint:
+
+    * Calls ``initTabNavigation()``, ``initModal()``, ``initChat()``,
+      ``initIngestion()``, ``initEvaluation()``, ``updateStatus()``,
+      ``loadDocumentsList()`` in order.
+    * ``initTabNavigation()`` wires ``.nav-tab[data-target]`` attributes to
+      tab panel toggling via ``classList``.
+
+* **Modular Jinja2 Template Partials & Base Layout**
+  (``templates/``):
+
+  Deconstructed monolithic 422-line ``index.html`` into Jinja2 partials
+  (``REFACTOR-UI-02``):
+
+  - ``base.html`` — HTML5 base shell with ``{% block title %}``,
+    ``{% block head %}``, ``{% block content %}``, ``{% block scripts %}``
+    extension points; links Google Fonts and all CSS stylesheets.
+  - ``partials/header.html`` — Navbar branding, dynamic version badge,
+    ChromaDB status indicator, sample/reset action buttons, and tab bar.
+  - ``partials/tab_chat.html`` — Suggestion chips, message feed area, chat
+    input form, and live QA pipeline inspector stepper with diagnostic metrics.
+  - ``partials/tab_ingestion.html`` — Drag-and-drop upload dropzone,
+    chunk size/overlap inputs, SSE ingestion stepper, and indexed documents
+    list with per-document card and delete controls.
+  - ``partials/tab_evaluation.html`` — Benchmark run trigger, 5-card summary
+    metrics grid, and full-width diagnostic results ``<table>`` with
+    PASS/FAIL badges.
+  - ``partials/modal_inspector.html`` — Fixed-position backdrop, modal card,
+    title header, scrollable body, and close button.
+  - ``index.html`` — Thin container extending ``base.html`` and including
+    all partials.
+
+* **Domain-Driven Component CSS Architecture**
+  (``app/static/css/``):
+
+  Decomposed monolithic 978-line ``style.css`` into domain-driven partials
+  (``REFACTOR-UI-03``):
+
+  - ``base.css`` — All CSS custom property design tokens (``:root``): earthy
+    palette (warm sand, forest green, terracotta, sage accents), status state
+    colors, typography scale, radius tokens, shadow definitions. Global
+    box-sizing reset and body typography baseline.
+  - ``layout.css`` — ``app-container``, ``app-header``, ``version-badge``,
+    animated ``pulse-dot`` status indicator, ``nav-tabs``/``nav-tab`` active
+    states, ``tab-pane`` toggling, full button system (``btn``,
+    ``btn-primary``, ``btn-secondary``, ``btn-outline-danger``, ``btn-sm``,
+    ``btn-block``, ``btn-icon``), and ``panel-card`` containers.
+  - ``components/chat.css`` — ``chat-layout`` responsive CSS Grid (1fr +
+    340px sidebar, collapses at 900px), message bubbles, citation pill system,
+    drawer toggle buttons, chat input form.
+  - ``components/inspector.css`` — Vertical stepper timeline with ``::after``
+    connector lines, ``step-icon`` state classes (``running``, ``completed``,
+    ``failed``), ``metric-grid`` 2-column card layout.
+  - ``components/ingestion.css`` — ``drop-zone`` with dashed border and
+    dragover highlight, selected file info strip, ``config-grid`` 2-column
+    layout, ``doc-card`` list with type badge.
+  - ``components/evaluation.css`` — ``eval-header-card``, ``eval-summary-grid``
+    (auto-fit minmax), ``eval-stat-card``, ``data-table`` with sticky header,
+    ``badge`` with ``badge-success`` / ``badge-fail`` variants.
+  - ``components/modal.css`` — Fixed full-viewport backdrop, ``modal-card``
+    with max-height scrollable body, ``modal-body pre`` with monospace and
+    ``word-break``.
+  - ``style.css`` — Reduced to ~12 lines of ``@import`` orchestration rules.
 
 Changed / Refactored
---------------------
-* **Decoupled Pipeline Dependency Injection** (``app/api/routes.py``, ``app/main.py``):
-  - Removed hardcoded module-level ``rag_pipeline = RAGPipeline()`` singleton from API routes.
-  - Injected pipeline instance via Flask application context (``app.extensions["rag_pipeline"]``) in ``create_app()``.
-  - Implemented thread-safe ``get_pipeline() -> RAGPipeline`` accessor resolving from ``current_app.extensions`` with lazy fallback.
-  - Captured pipeline instances in request contexts prior to spawning streaming worker threads in SSE endpoints.
+---------------------
+
+* **Decoupled Pipeline Dependency Injection**
+  (``app/api/routes.py``, ``app/main.py``):
+
+  - Removed hardcoded module-level ``rag_pipeline = RAGPipeline()`` singleton
+    from ``app/api/routes.py`` (``REFACTOR-API-02``).
+  - ``create_app(test_config=None, pipeline=None)`` accepts an optional
+    ``pipeline: RAGPipeline | None`` argument; when ``None``, a new instance
+    is created. The resolved pipeline is stored in
+    ``app.extensions["rag_pipeline"]``.
+  - Implemented ``get_pipeline() -> RAGPipeline`` in ``app/api/routes.py``:
+    resolves from ``current_app.extensions.get("rag_pipeline")``; catches
+    ``RuntimeError`` (no app context) and falls back to a module-level
+    lazy singleton.
+  - All 10 API route handlers now call ``get_pipeline()`` per-request.
+  - In SSE streaming routes, ``pipeline = get_pipeline()`` is captured before
+    spawning background threads to avoid context re-entry.
 
 Fixed
 -----
-* Eliminated tight coupling of API routes to a singleton pipeline instance (``REFACTOR-API-02``).
-* Fixed monolithic frontend architecture by deconstructing JS, Jinja2 templates, and CSS into domain-driven modular files (``REFACTOR-UI-01``, ``REFACTOR-UI-02``, ``REFACTOR-UI-03``).
 
+* ``REFACTOR-API-02`` — API routes no longer share a singleton pipeline at
+  module import time; each test or deployment can inject a custom pipeline.
+* ``REFACTOR-UI-01`` — Monolithic ``app.js`` restructured into scoped ES6
+  component modules.
+* ``REFACTOR-UI-02`` — Monolithic ``index.html`` split into Jinja2 partials.
+* ``REFACTOR-UI-03`` — CSS refactored into seven focused domain stylesheets.
+
+
+----
+
+Security Subsystem
+==================
+
+Added
+-----
+
+* **Content-Security-Policy, Anti-Clickjacking & Anti-MIME Headers**
+  (``app/api/security.py``):
+
+  - ``setup_security_headers(app)`` registers an ``after_request`` hook
+    enforcing ``Content-Security-Policy``, ``X-Frame-Options: DENY``,
+    ``X-Content-Type-Options: nosniff``, and
+    ``Referrer-Policy: strict-origin-when-cross-origin`` on every response.
+
+* **CORS Strict Origin Whitelisting**
+  (``app/api/security.py``):
+
+  - ``setup_cors()`` scopes ``flask-cors`` exclusively to ``r"/api/*"``
+    ensuring non-API routes (e.g. ``GET /``) never expose CORS headers to
+    cross-origin callers.
+
+* **Path Traversal Sanitization in File Upload**
+  (``app/api/security.py`` → ``save_uploaded_file``):
+
+  - ``save_uploaded_file(file, target_dir=None)`` strips all directory
+    separators from client-supplied filenames via ``sanitize_filename()``
+    preventing saved path from escaping the target upload directory.
+  - Rejects zero-byte uploads and cleans up any partially created file.
+
+* **Frontend DOM XSS Prevention (Static Analysis)**
+  (``app/static/js/tests/test_frontend_security.py``):
+
+  - Enforces zero-tolerance for unsafe XSS sinks:
+    ``\.innerHTML\s*=``, ``document\.write(``, ``eval(``.
+  - Enforces zero-tolerance for unsafe DOM injection APIs:
+    ``\.insertAdjacentHTML``, ``outerHTML\s*=``.
+  - Positive assertion that ``chat.js`` uses ``.textContent`` for all
+    user/bot message rendering.
+  - All checks scan every ``*.js`` file under ``app/static/js/``
+    (excluding ``test_`` prefixed files).
+
+
+----
 
 Testing, Evaluation & Quality Assurance Subsystem
 =================================================
 
 Added
 -----
-* **Collocated Modular Test Architecture** (``app/*/tests/``, ``tests/integration/``, ``pytest.ini``, ``Makefile``):
-  - Transitioned the entire test suite from a centralized root layout to a high-cohesion, collocated architecture within each source package:
-    * ``app/api/tests/test_api_security.py``: Strict Flask-CORS origin preflight verification, untrusted origin rejection, non-API route isolation, custom allowed origins configuration, decoupled pipeline factory injection (``create_app(pipeline=...)``), and path traversal sanitization in file uploads.
-    * ``app/chunking/tests/test_chunking.py``: Recursive text splitting, custom separator fallback, overlap boundaries, and token estimation tests.
-    * ``app/embedding/tests/test_embedding.py``: Dynamic dimension and metric consistency, mathematical boundary and monotonicity contracts for ``distance_to_similarity`` across Cosine, L2, and IP spaces, and batch shape invariance.
-    * ``app/ingestion/tests/test_ingestion.py``: Dynamic Parser Strategy Registry extensibility (OCP), unmapped extension error handling, SHA-256 buffer invariance, and config-driven ``validate_file`` size/extension limits.
-    * ``app/retrieval/tests/test_retrieval.py``: Metric-agnostic score threshold filtering, dynamic ``top_k`` boundary slicing, document ID filtering, and summary property metrics.
-    * ``app/augmentation/tests/test_prompt_builder.py``: Dynamic prompt asset loading from ``assets/prompts/``, fail-fast missing asset validation, 1-indexed citation mapping, and empty context fallback handling.
-    * ``app/generation/tests/test_generator.py``: Dynamic LiteLLM telemetry toggle, fail-fast JSON asset loader, offline grounded extractive fallback, dynamic topic threshold matching, and sentence limit boundaries.
-    * ``app/storage/tests/test_vector_store.py``: Dynamic HNSW space metadata (``hnsw:space``), batch insertion slicing over ``batch_size`` increments, collection reset metadata preservation, and similarity delegation.
-    * ``app/evaluation/tests/test_evaluation.py``: Automated scoring, retrieval verification, factual keyword grounding, and refusal guardrail assertions.
-  - Retained end-to-end multi-stage pipeline lifecycle tests in ``tests/integration/test_pipeline.py``.
-  - Configured ``pytest.ini`` with unified discovery paths (``testpaths = app tests``) and clean root configuration.
-  - Updated ``Makefile`` test target to execute ``python3 -m pytest -v`` across all collocated and integration suites.
-* **Automated Frontend Static Security & DOM Test Suite** (``app/static/js/tests/test_frontend_security.py``, ``app/static/js/tests/test_frontend_components.py``):
-  - Built an automated AST/source-scanning unit and security test suite validating all client-side JavaScript components (``app/static/js/**/*.js``).
-  - Enforces zero-tolerance policy for unsafe XSS sinks (``innerHTML``, ``outerHTML``, ``document.write``).
-  - Validates exclusive usage of safe DOM APIs (``textContent``, ``innerText``, ``createElement``, ``setAttribute``).
-  - Guards against dangerous runtime code evaluation patterns (``eval()``, ``Function()`` constructor, string-based ``setTimeout``).
-  - Validates 100% resolution of ES6 module import dependency graphs, state pub-sub event bus methods (``on``, ``emit``), REST transport endpoints, SSE stream boundary parsing, and component lifecycle hooks (``initChat``, ``initIngestion``, ``initEvaluation``, ``initInspector``).
-* **Demanding Evaluation Benchmark & Constraint Logic** (``app/evaluation/test_dataset.py``, ``app/evaluation/evaluator.py``):
-  - Extended ``EvaluationTestCase`` dataclass with strict constraint parameters:
-    * ``max_length: Optional[int]``: Enforces character-length boundaries on model outputs.
-    * ``require_all_keywords: bool``: Requires 100% keyword recall for demanding multi-document synthesis queries.
-  - Upgraded ``BENCHMARK_TEST_SUITE`` queries with tighter topic thresholds, concise character bounds (e.g. <100 chars), and multi-document synthesis assertions.
-  - Embedded length boundary verification and all-keyword grounding assertions into ``RAGEvaluator.evaluate_test_case()``.
-* **Real-World Sample Documents Corpus** (``data/sample_documents/``):
-  - Enriched and expanded all 4 core benchmark files with dense, realistic policies, specifications, and architecture guides:
-    * ``acme_hr_policy.txt``: Comprehensive Employee Handbook with detailed hybrid work rules, core hours, stipend eligibility, and parental leave policies.
-    * ``cloud_architecture_handbook.txt``: In-depth DevOps resilient systems handbook detailing 99.99% SLAs, Redis caching TTLs, exponential backoff, and circuit breaker patterns.
-    * ``renewable_energy_faq.txt``: Technical specification and FAQ covering Mono PERC solar panel efficiency, LiFePO4 battery chemistry, and thermal limits.
-    * ``doc_qa_system_manual.txt``: Full RAG architectural guide detailing ingestion pipelines, MiniLM 384-d embeddings, and ChromaDB vector store mechanics.
+
+* **Collocated Modular Test Architecture**
+  (``app/*/tests/``, ``tests/integration/``, ``pytest.ini``, ``Makefile``):
+
+  Transitioned from a flat ``tests/`` root layout to a high-cohesion
+  collocated architecture (``REFACTOR-TEST-01``):
+
+  - ``app/api/tests/test_api_security.py`` — 12 tests:
+
+    * ``test_security_headers_present``: Verifies ``Content-Security-Policy``,
+      ``X-Frame-Options: DENY``, ``X-Content-Type-Options: nosniff``,
+      ``Referrer-Policy`` on all responses.
+    * ``test_api_status_endpoint``: Status ``200``; JSON has ``status``,
+      ``vector_store``, ``config`` keys.
+    * ``test_api_query_empty``: Empty query → ``400`` with ``error`` key.
+    * ``test_api_upload_invalid_type``: ``.py`` upload → ``400`` with
+      ``"Unsupported file type"``.
+    * ``test_cors_preflight_whitelisted_origin``: ``OPTIONS /api/query``
+      from whitelisted origin receives ``Access-Control-Allow-Origin``
+      and ``Access-Control-Allow-Credentials: true``.
+    * ``test_cors_preflight_forbidden_origin``: Untrusted origin does not
+      receive CORS allow headers.
+    * ``test_cors_non_api_route_not_exposed``: ``GET /`` does not expose
+      ``Access-Control-Allow-Origin``.
+    * ``test_cors_custom_origins_configuration``: Custom ``allowed_origins``
+      correctly authorizes the custom origin on OPTIONS requests.
+    * ``test_create_app_with_custom_injected_pipeline``: ``create_app(pipeline=...)``
+      stores the custom instance; routes resolve it on subsequent API calls.
+    * ``test_save_uploaded_file_path_traversal_sanitization``: Traversal
+      filename ``../../../traversal_target.txt`` sanitized to
+      ``traversal_target.txt``; saved path stays inside ``tmp_path``.
+    * ``test_save_uploaded_file_empty_file_rejected``: Zero-byte upload raises
+      ``FileValidationError``; no file left in upload dir.
+    * Flask-CORS tests carry ``@pytest.mark.skipif(CORS is None, ...)``
+      guards for resilience when ``flask-cors`` is not installed.
+
+  - ``app/chunking/tests/test_chunking.py`` (extended):
+
+    * ``test_tokenizer_estimation``: Verifies ``estimate_tokens("")`` → 0;
+      single-word → 1; longer text → > 10.
+    * ``test_configurable_separators``: Custom separator ``["||"]``; text
+      ``"A||B||C"`` splits into 3 chunks with correct content.
+
+  - ``app/embedding/tests/test_embedding.py`` — 5 tests:
+
+    * ``test_embedding_manager_properties_consistency``: ``distance_metric``
+      matches ``config.storage.distance_metric``; ``dimension`` matches
+      actual embed output length.
+    * ``test_distance_to_similarity_mathematical_invariants``:
+      Distance 0.0 → similarity 1.0; all distances in ``[0.05…2.0]``
+      produce similarities in ``[0.0, 1.0]``; monotonically non-increasing.
+    * ``test_distance_to_similarity_across_supported_metrics``:
+      Monkeypatches through ``"cosine"``, ``"ip"``, and ``"l2"``; asserts
+      the exact formula output for each.
+    * ``test_embed_documents_batch_invariance``: 3 docs → 3 vectors, each
+      of length ``embedding_manager.dimension``.
+    * ``test_embed_documents_empty_list``: Returns ``[]`` gracefully.
+
+  - ``app/ingestion/tests/test_ingestion.py`` — 9 tests:
+
+    * ``test_sanitize_filename``: Path traversal and Windows separators
+      stripped to safe basename.
+    * ``test_validate_nonexistent_file`` / ``test_validate_empty_file`` /
+      ``test_validate_invalid_extension``: Standard validation error cases.
+    * ``test_validate_dynamic_size_limit``: 200-byte file rejected at
+      ``max_bytes=len(content) - 50``; accepted at
+      ``max_bytes=len(content) + 50``.
+    * ``test_validate_dynamic_allowed_extensions``: ``".customext"`` rejected
+      when not in ``{".txt", ".pdf"}``; accepted when in ``{".customext"}``.
+    * ``test_compute_sha256_buffer_invariance``: Same file produces identical
+      64-char hex with default, 64-byte, and 2× config buffer sizes.
+    * ``test_parse_valid_txt``: Full round-trip verifying all ``ParsedDocument``
+      fields.
+    * ``test_parser_registry_dynamic_extensibility``: Custom
+      ``CustomDocParser`` registered in ``PARSER_REGISTRY[".customdoc"]``;
+      parse verified; registration removed in ``finally``.
+    * ``test_parse_unsupported_extension_error``: Unmapped extension raises
+      ``FileValidationError``.
+
+  - ``app/retrieval/tests/test_retrieval.py`` — 6 tests:
+
+    * ``test_retrieval_matches_relevant_chunk``: Semantic search returns
+      the most relevant chunk with ``is_confident=True``.
+    * ``test_retrieval_empty_query``: Empty string → 0 chunks,
+      ``has_relevant_context=False``.
+    * ``test_retrieval_dynamic_score_threshold_override``: Very strict
+      threshold marks all ``is_confident=False``; relaxed threshold marks
+      all confident.
+    * ``test_retrieval_dynamic_top_k_slicing``: ``top_k=1`` → 1 chunk;
+      ``top_k=2`` → 2 chunks.
+    * ``test_retrieval_doc_id_filter``: Filtering by doc ID returns only
+      matching chunks.
+    * ``test_retrieval_output_properties``: ``highest_similarity`` equals
+      ``max(chunk.similarity ...)``.
+
+  - ``app/augmentation/tests/test_prompt_builder.py`` — 6 tests:
+
+    * ``test_prompt_builder_asset_loading``: Default ``PromptBuilder()``
+      loads non-empty ``system_instruction`` and ``query_template``
+      containing ``{formatted_context}`` and ``{query}`` placeholders.
+    * ``test_load_asset_missing_file_raises_filenotfound``: Raises
+      ``FileNotFoundError`` with ``"Prompt asset file not found"`` message.
+    * ``test_prompt_builder_citation_mapping_and_indexing``: Builds prompt
+      with 2 chunks; asserts 1-indexed citation map entries match source
+      chunk fields and verifies source header format in
+      ``formatted_context``.
+    * ``test_prompt_builder_empty_chunks_fallback``: Zero chunks →
+      ``formatted_context == "[NO RELEVANT CONTEXT FOUND]"``, empty
+      ``citations_map``, ``chunk_count == 0``.
+    * ``test_prompt_builder_custom_system_instruction_override``: Custom
+      instruction overrides the file-loaded default.
+    * ``test_citation_info_and_augmented_prompt_to_dict``: ``to_dict()``
+      contains all expected keys; first citation has correct ``source_index``
+      and ``filename``.
+
+  - ``app/generation/tests/test_generator.py`` — 7 tests:
+
+    * ``test_generator_telemetry_configuration``: After instantiation,
+      ``litellm.suppress_debug_info`` matches ``gen.config.suppress_debug_info``.
+    * ``test_load_json_asset_fail_fast``: ``_load_json_asset`` raises
+      ``FileNotFoundError`` for missing path.
+    * ``test_nlp_assets_loaded_successfully``: ``STOPWORDS`` and
+      ``ANCHOR_TERMS`` are non-empty; common words present.
+    * ``test_generator_offline_refusal_on_empty_context``: Returns
+      ``DEFAULT_REFUSAL_TEXT``, ``is_refusal=True``,
+      ``is_offline_mode=True``, zero citations for empty context.
+    * ``test_generator_offline_refusal_on_unmatched_topics``: Unrelated
+      query topic (chocolate cake) against Redis context → refusal.
+    * ``test_generator_offline_extractive_grounding_and_sentence_limit``:
+      Offline generator extracts relevant sentences; not a refusal;
+      citations present; sentence count ≤ ``offline_max_sentences``.
+    * ``test_generation_result_to_dict``: ``GenerationResult.to_dict()``
+      contains all expected keys.
+
+  - ``app/storage/tests/test_vector_store.py`` — 7 tests:
+
+    * ``test_vector_store_add_and_search``: Inserts 2 chunks; top match
+      contains ``"paid time off"``; similarity > 0.
+    * ``test_vector_store_list_and_delete``: Adds 1 chunk; lists 1 doc;
+      deletes it; confirms empty list.
+    * ``test_vector_store_dynamic_hnsw_metadata``: Collection
+      ``metadata["hnsw:space"]`` equals ``embedding_manager.distance_metric``.
+    * ``test_vector_store_reset_collection_preserves_metadata``: After reset,
+      count is 0; ``hnsw:space`` metadata preserved.
+    * ``test_vector_store_batch_insertion_slicing``: Monkeypatches
+      ``config.storage.batch_size = 2``; inserts ``batch_size + 3`` chunks;
+      all persisted; count equals dynamic total.
+    * ``test_vector_store_empty_add_chunks``: ``add_chunks([])`` → 0 without
+      errors.
+    * ``test_vector_store_similarity_delegation``: Search result
+      ``similarity`` equals
+      ``embedding_manager.distance_to_similarity(raw_distance)``
+      (``pytest.approx``).
+
+  - ``app/evaluation/tests/test_evaluation.py`` — relocated from
+    ``tests/test_evaluation.py`` (100% similarity; no code changes).
+
+  - End-to-end multi-stage pipeline lifecycle tests retained in
+    ``tests/integration/test_pipeline.py``.
+
+  - ``pytest.ini`` created with ``testpaths = app tests``, enabling
+    ``pytest -v`` to discover both collocated unit tests and integration
+    tests in a single run.
+
+  - ``Makefile`` ``test`` target updated from
+    ``$(PYTHON) -m pytest tests/ -v`` to ``$(PYTHON) -m pytest -v``
+    (path-less invocation driven by ``pytest.ini``).
+
+* **Automated Frontend Static Security & DOM Test Suite**
+  (``app/static/js/tests/test_frontend_components.py``,
+  ``app/static/js/tests/test_frontend_security.py``):
+
+  - ``test_module_import_graph_resolution``: Dynamically scans every
+    ``*.js`` file (excluding ``tests/``), extracts all relative
+    ``import/export from "..."`` paths via regex, resolves each against
+    the importer file's directory, asserts every resolved path exists and
+    is a file, and requires at least 1 verified import.
+
+  - ``test_state_module_exports_and_event_bus``: Reads ``modules/state.js``
+    and asserts presence of ``export const state =``,
+    ``export function on(``, ``export function emit(``.
+
+  - ``test_api_transport_client_contracts``: Reads ``modules/api.js`` and
+    asserts export presence of all 8 endpoint functions; also verifies
+    SSE parser splits on ``"\n\n"`` boundaries and handles ``"data: "``
+    prefix.
+
+  - ``test_component_lifecycle_initializers``: For each of 5 component files
+    checks all required ``export function <hook>()`` declarations are present.
+
+  - ``test_app_bootstrap_entrypoint``: Reads ``app.js`` and asserts presence
+    of all 5 init function calls and ``DOMContentLoaded`` event listener.
+
+  - ``test_no_unsafe_sinks`` and ``test_no_unsafe_dom_apis``: Scan all
+    non-test ``*.js`` files for prohibited DOM sink and API patterns;
+    fail with an explicit list of violations.
+
+  - ``test_enforces_strict_text_content``: Positive assertion that
+    ``chat.js`` contains ``.textContent``.
+
+* **Demanding Evaluation Benchmark & Constraint Logic**
+  (``app/evaluation/test_dataset.py``, ``app/evaluation/evaluator.py``):
+
+  - ``EvaluationTestCase`` extended with:
+
+    * ``max_length: Optional[int] = None`` — model answer must be ≤ this
+      many characters.
+    * ``require_all_keywords: bool = False`` — all expected keywords must
+      be present for grounding to pass.
+
+  - ``RAGEvaluator.evaluate_test_case()`` evaluates a fifth dimension —
+    **Length Constraint** — and ANDs it into ``overall_passed``.
+
+  - ``BENCHMARK_TEST_SUITE`` updated with stricter ``max_length`` bounds
+    (e.g. ``< 100`` chars), ``require_all_keywords=True`` for synthesis
+    queries, and multi-document cross-referencing phrasing.
+
+* **Real-World Sample Documents Corpus**
+  (``data/sample_documents/``):
+
+  All 4 benchmark documents substantially rewritten with dense, long-form
+  realistic content:
+
+  - ``acme_hr_policy.txt`` — Full prose HR handbook: core hours
+    (10:00 AM–3:00 PM ET), mandatory in-office days (Tue/Thu), $750 home
+    office stipend with 90-day receipt deadline, PTO accrual (20 days +
+    10 sick), 16-week parental leave with concurrent FMLA rules.
+  - ``cloud_architecture_handbook.txt`` — DevOps resiliency guide: 99.99%
+    SLA definition (4.38 min/month downtime budget), Redis TTL policies
+    (15-min session, 24-h static config), exponential backoff (3 retries,
+    200ms base, 50% jitter), circuit breaker (50% failure rate over 60-s
+    sliding window).
+  - ``renewable_energy_faq.txt`` — Solar + battery technical specification:
+    Mono PERC panel efficiency (20%–22.8% under STC), 25-year 85% output
+    warranty, LiFePO4 cycle life (6,000–8,000 cycles at 80% DoD),
+    operating temperature range (15°C–35°C).
+  - ``doc_qa_system_manual.txt`` — Full RAG architectural guide: chunking
+    pipeline (500-char / 50 overlap), MiniLM-L6-v2, 384-d vector space,
+    ChromaDB metadata, k-NN retrieval, hallucination guardrail mechanics.
 
 Changed / Refactored
---------------------
-* **Runtime Pydantic 2.13+ LiteLLM Compatibility Shim** (``app/generation/generator.py``):
-  - Introduced automatic schema rebuild and class injection for ``ChatCompletionReasoningSummaryTextBlock`` and ``Message`` to prevent runtime PydanticUserError during LiteLLM completions.
+---------------------
+
+* **Runtime Pydantic 2.13+ LiteLLM Compatibility Shim**
+  (``app/generation/generator.py``):
+
+  - Introduced automatic schema rebuild and class injection for
+    ``ChatCompletionReasoningSummaryTextBlock`` and ``Message`` to prevent
+    runtime ``PydanticUserError`` during LiteLLM completions.
+
+* **Documentation Directory Reorganization**
+  (``docs/``):
+
+  - All v0.1.0 roadmap and reference documents moved into
+    ``docs/v0.1.0/`` subdirectory:
+
+    * ``docs/dataclasses_overview.md`` → ``docs/v0.1.0/dataclasses_overview.md``
+    * ``docs/evaluation_scoring_explained.md`` → ``docs/v0.1.0/evaluation_scoring_explained.md``
+    * ``docs/logging_and_secrets.md`` → ``docs/v0.1.0/logging_and_secrets.md``
+    * ``docs/roadmap/step1_*.md`` through ``step6_*.md`` →
+      ``docs/v0.1.0/roadmap_v0.1.0/1_*.md`` through ``6_*.md``
+
+  - v0.2.0 documents live in ``docs/v0.2.0/``:
+
+    * ``docs/v0.2.0/CHANGELOG.rst`` (this file)
+    * ``docs/v0.2.0/fixes-and-changes.md`` — full architecture review
+      backlog with tagged items, priority rankings, and branch strategy.
 
 Fixed
 -----
+
+* ``REFACTOR-TEST-01`` — Tests are now collocated with source; root
+  ``tests/`` retains only integration tests.
+* ``DOC-EVAL-02`` — Sample document corpus enriched with dense realistic
+  content substantially increasing retrieval challenge difficulty.
 * **CLI Theme Formatting Syntax** (``cli.py``):
-  - Resolved missing closing brackets in Rich console markup style tags across ingestion banners, headers, and question inspectors.
+  Resolved missing closing brackets in Rich console markup style tags
+  across ingestion banners, headers, and question inspectors.
 
