@@ -9,6 +9,7 @@ from app.api.security import save_uploaded_file, setup_cors
 from app.config import config
 from app.ingestion.validator import FileValidationError
 from app.pipeline.rag_pipeline import RAGPipeline
+from app.version import __version__
 from werkzeug.datastructures import FileStorage
 
 
@@ -29,18 +30,22 @@ def test_security_headers_present(client):
 
 
 def test_api_status_endpoint(client):
+    """Verify status endpoint dynamically returns active version and collection configuration."""
     res = client.get("/api/status")
     assert res.status_code == 200
     data = res.get_json()
     assert data["status"] == "ready"
-    assert "vector_store" in data
-    assert "config" in data
+    assert data["version"] == __version__
+    assert data["vector_store"]["collection_name"] == config.storage.collection_name
+    assert data["config"]["default_model"] == config.llm.model
+    assert data["config"]["default_top_k"] == config.retrieval.top_k
 
 
 def test_api_query_empty(client):
+    """Verify empty query string is rejected with explicit descriptive error message."""
     res = client.post("/api/query", json={"query": ""})
     assert res.status_code == 400
-    assert "error" in res.get_json()
+    assert "Query cannot be empty" in res.get_json()["error"]
 
 
 def test_api_upload_invalid_type(client):

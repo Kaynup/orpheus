@@ -1,6 +1,7 @@
 """Unit tests for document validation and ingestion parser."""
 
 import tempfile
+import uuid
 from pathlib import Path
 import pytest
 
@@ -94,6 +95,7 @@ def test_compute_sha256_buffer_invariance(tmp_path):
 
 
 def test_parse_valid_txt(tmp_path):
+    """Verify parse_document extracts text and derives exact SHA-256 and UUID5 identifiers."""
     txt_file = tmp_path / "sample_policy.txt"
     sample_text = "Acme Corporation remote policy allows working from home 3 days a week."
     txt_file.write_text(sample_text, encoding="utf-8")
@@ -105,8 +107,14 @@ def test_parse_valid_txt(tmp_path):
     assert doc.total_chars == len(sample_text)
     assert len(doc.pages) == 1
     assert doc.pages[0].page_number == 1
-    assert doc.checksum is not None
-    assert doc.doc_id is not None
+    assert doc.pages[0].char_count == len(sample_text)
+
+    # Exact cryptographic derivation verification (no weak 'is not None' checks)
+    expected_checksum = compute_sha256(txt_file)
+    expected_doc_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"file://{expected_checksum}"))
+    assert doc.checksum == expected_checksum
+    assert doc.doc_id == expected_doc_id
+
 
 
 def test_parser_registry_dynamic_extensibility(tmp_path):

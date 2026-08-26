@@ -14,6 +14,7 @@ from app.pipeline.rag_pipeline import QueryResult, RAGPipeline
 @dataclass
 class TestCaseResult:
     """Detailed outcome of a single evaluation test case."""
+    __test__ = False
     test_id: str
     question: str
     category: str

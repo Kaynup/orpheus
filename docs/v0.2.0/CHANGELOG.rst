@@ -571,10 +571,17 @@ Added
     * Flask-CORS tests carry ``@pytest.mark.skipif(CORS is None, ...)``
       guards for resilience when ``flask-cors`` is not installed.
 
-  - ``app/chunking/tests/test_chunking.py`` (extended):
+  - ``app/chunking/tests/test_chunking.py`` — 5 tests:
 
-    * ``test_tokenizer_estimation``: Verifies ``estimate_tokens("")`` → 0;
-      single-word → 1; longer text → > 10.
+    * ``test_chunking_provenance``: Single-page chunk metadata, boundaries,
+      character counts, and token count estimation matching text length.
+    * ``test_chunking_multipage_provenance``: Multi-page document chunking
+      verifying correct page number assignment (page 1 and page 2) and
+      sequential indexing across page boundaries.
+    * ``test_chunking_overlap_constraint``: Raises ``ValueError`` when
+      ``chunk_overlap >= chunk_size``.
+    * ``test_tokenizer_estimation``: Verifies mathematical invariant
+      ``estimate_tokens(s) == max(1, len(s) // 4)`` across variable string lengths.
     * ``test_configurable_separators``: Custom separator ``["||"]``; text
       ``"A||B||C"`` splits into 3 chunks with correct content.
 
@@ -606,8 +613,9 @@ Added
       when not in ``{".txt", ".pdf"}``; accepted when in ``{".customext"}``.
     * ``test_compute_sha256_buffer_invariance``: Same file produces identical
       64-char hex with default, 64-byte, and 2× config buffer sizes.
-    * ``test_parse_valid_txt``: Full round-trip verifying all ``ParsedDocument``
-      fields.
+    * ``test_parse_valid_txt``: Full round-trip verifying text extraction,
+      page metadata, exact cryptographic SHA-256 checksum, and deterministic
+      UUID5 document ID derivation.
     * ``test_parser_registry_dynamic_extensibility``: Custom
       ``CustomDocParser`` registered in ``PARSER_REGISTRY[".customdoc"]``;
       parse verified; registration removed in ``finally``.
@@ -689,11 +697,32 @@ Added
       ``embedding_manager.distance_to_similarity(raw_distance)``
       (``pytest.approx``).
 
-  - ``app/evaluation/tests/test_evaluation.py`` — relocated from
-    ``tests/test_evaluation.py`` (100% similarity; no code changes).
+  - ``app/evaluation/tests/test_evaluation.py`` — 4 tests:
 
-  - End-to-end multi-stage pipeline lifecycle tests retained in
-    ``tests/integration/test_pipeline.py``.
+    * ``test_evaluator_scoring_all_dimensions``: Evaluates all 5 scoring
+      dimensions on supported questions and unsupported out-of-scope refusals.
+    * ``test_evaluator_max_length_constraint_failure``: Asserts that answers
+      exceeding ``max_length`` fail length verification and report failure reasons.
+    * ``test_evaluator_strict_keyword_grounding_failure``: Asserts that
+      ``require_all_keywords=True`` strictly fails when any keyword is missing.
+    * ``test_evaluator_run_benchmark_aggregate_metrics``: Runs multi-case
+      benchmark suite and verifies mathematical aggregation of pass rates,
+      average latency, and accuracy percentages on ``EvaluationReport``.
+
+  - ``tests/integration/test_pipeline.py`` — 4 end-to-end integration tests:
+
+    * ``test_pipeline_supported_query``: Strict factual recall (``"20 days"``)
+      and citation provenance linking to ``vacation_policy.txt``.
+    * ``test_pipeline_unsupported_query_guardrail``: Anti-hallucination refusal,
+      ``is_refusal=True``, and zero citations on out-of-scope questions.
+    * ``test_pipeline_event_streaming_callback``: Sequential emission of
+      typed ``PipelineEvent`` records across all 7 pipeline lifecycle stages.
+    * ``test_pipeline_multi_document_lifecycle_and_deletion``: Multi-document
+      ingestion, cross-synthesis QA, and subsequent query refusal after
+      document deletion.
+
+  - Full automated test suite comprises **73 passing tests** across 12 test
+    modules with 100% pass rate in under 15 seconds.
 
   - ``pytest.ini`` created with ``testpaths = app tests``, enabling
     ``pytest -v`` to discover both collocated unit tests and integration
@@ -702,6 +731,7 @@ Added
   - ``Makefile`` ``test`` target updated from
     ``$(PYTHON) -m pytest tests/ -v`` to ``$(PYTHON) -m pytest -v``
     (path-less invocation driven by ``pytest.ini``).
+
 
 * **Automated Frontend Static Security & DOM Test Suite**
   (``app/static/js/tests/test_frontend_components.py``,
@@ -802,6 +832,11 @@ Changed / Refactored
     * ``docs/v0.2.0/CHANGELOG.rst`` (this file)
     * ``docs/v0.2.0/fixes-and-changes.md`` — full architecture review
       backlog with tagged items, priority rankings, and branch strategy.
+    * ``docs/v0.2.0/core_functionalities/`` — comprehensive 8-module
+      technical documentation suite mapping BRD requirements (FR1–FR8,
+      NFR1–NFR5) with bidirectional Mermaid flow, sequence, state, and
+      architecture diagrams.
+
 
 Fixed
 -----
