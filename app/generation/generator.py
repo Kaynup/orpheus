@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 import os
 import time
+import typing
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional
 
-import typing
 try:
     import typing_extensions
+
     if not hasattr(typing, "NotRequired"):
         typing.NotRequired = getattr(typing_extensions, "NotRequired", None)
     if not hasattr(typing, "Required"):
@@ -25,10 +26,13 @@ import litellm
 try:
     import pydantic
     from litellm.types import utils as litellm_utils
+
     if hasattr(litellm_utils, "Message"):
         if not hasattr(litellm_utils, "ChatCompletionReasoningSummaryTextBlock"):
+
             class ChatCompletionReasoningSummaryTextBlock(pydantic.BaseModel):
                 pass
+
             setattr(litellm_utils, "ChatCompletionReasoningSummaryTextBlock", ChatCompletionReasoningSummaryTextBlock)
         if hasattr(litellm_utils.Message, "model_rebuild"):
             litellm_utils.Message.model_rebuild()
@@ -72,12 +76,14 @@ ANCHOR_TERMS: set[str] = set(_NLP_DATA["anchor_terms"])
 
 class GenerationError(Exception):
     """Raised when LLM completion fails."""
+
     pass
 
 
 @dataclass
 class GenerationResult:
     """Comprehensive output of the generation stage."""
+
     answer: str
     model: str
     latency_ms: float
@@ -284,7 +290,11 @@ class LLMGenerator:
         }
 
         if "gemini" in m_str.lower():
-            key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or getattr(self.config, "gemini_api_key", None)
+            key = (
+                os.getenv("GEMINI_API_KEY")
+                or os.getenv("GOOGLE_API_KEY")
+                or getattr(self.config, "gemini_api_key", None)
+            )
             if key:
                 kwargs["api_key"] = key
         elif "openrouter" in m_str.lower():
@@ -296,10 +306,7 @@ class LLMGenerator:
             if key:
                 kwargs["api_key"] = key
         elif "ollama" in m_str.lower():
-            kwargs["api_base"] = (
-                self.config.ollama_api_base
-                or os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
-            )
+            kwargs["api_base"] = self.config.ollama_api_base or os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 
         return m_str, kwargs
 

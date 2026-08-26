@@ -1,8 +1,7 @@
 """Unit tests for frontend ES6 module graph, state bus, API transport, and safe component lifecycle."""
 
-from pathlib import Path
 import re
-import pytest
+from pathlib import Path
 
 JS_DIR = Path(__file__).resolve().parent.parent
 
@@ -69,7 +68,7 @@ def test_api_transport_client_contracts():
     assert not missing_endpoints, f"Missing API endpoints in api.js: {missing_endpoints}"
 
     # Verify SSE streaming parser handles data lines and boundary delimiters
-    assert "split(\"\\n\\n\")" in content or 'split("\\n\\n")' in content or 'split(`\\n\\n`)' in content, (
+    assert 'split("\\n\\n")' in content or 'split("\\n\\n")' in content or "split(`\\n\\n`)" in content, (
         "api.js SSE parser must split on standard \\n\\n stream event boundaries"
     )
     assert "data: " in content, "api.js SSE parser must handle 'data: ' payload prefix"
@@ -82,7 +81,13 @@ def test_component_lifecycle_initializers():
         "ingestion.js": ["initIngestion"],
         "evaluation.js": ["initEvaluation"],
         "modal.js": ["initModal"],
-        "inspector.js": ["resetQAStepper", "updateQAStep", "resetIngestStepper", "updateIngestStep", "updateDiagnosticMetrics"],
+        "inspector.js": [
+            "resetQAStepper",
+            "updateQAStep",
+            "resetIngestStepper",
+            "updateIngestStep",
+            "updateDiagnosticMetrics",
+        ],
     }
 
     missing_hooks = []

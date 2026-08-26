@@ -1,6 +1,7 @@
 """Pytest configuration and environment shims."""
 
 import sys
+import typing
 from pathlib import Path
 
 # Add project root to sys.path
@@ -16,9 +17,10 @@ except ImportError:
     pass
 
 # Ensure typing_extensions shim for python 3.10
-import typing
+
 try:
     import typing_extensions
+
     if not hasattr(typing, "NotRequired"):
         typing.NotRequired = getattr(typing_extensions, "NotRequired", None)
     if not hasattr(typing, "Required"):

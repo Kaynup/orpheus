@@ -13,6 +13,7 @@ from app.storage.vector_store import VectorStore
 @dataclass
 class RetrievedChunk:
     """Represents a single retrieved chunk with semantic score and source metadata."""
+
     rank: int
     chunk_id: str
     content: str
@@ -44,6 +45,7 @@ class RetrievedChunk:
 @dataclass
 class RetrievalOutput:
     """Comprehensive output of the retrieval stage."""
+
     query: str
     chunks: List[RetrievedChunk]
     has_relevant_context: bool

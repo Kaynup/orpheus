@@ -20,6 +20,7 @@ except ImportError:
 
 try:
     import typing_extensions
+
     if not hasattr(typing, "NotRequired"):
         typing.NotRequired = getattr(typing_extensions, "NotRequired", None)
     if not hasattr(typing, "Required"):
@@ -105,10 +106,16 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
     """Ingest a single document file."""
     path = Path(file_path)
     if not path.exists():
-        console.print(f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] File not found: {file_path}")
+        console.print(
+            f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] "
+            f"File not found: {file_path}"
+        )
         sys.exit(1)
 
-    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting Document: {path.name} ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(
+        f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting Document: {path.name} "
+        f"===[/{UI_THEME['colors']['success_color']}]"
+    )
     try:
         res: IngestionResult = pipeline.ingest_document(
             file_path=path,
@@ -131,7 +138,9 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
         console.print(table)
 
     except Exception as err:
-        console.print(f"\n[{UI_THEME['colors']['error_color']}]Ingestion Failed:[/{UI_THEME['colors']['error_color']}] {err}")
+        console.print(
+            f"\n[{UI_THEME['colors']['error_color']}]Ingestion Failed:[/{UI_THEME['colors']['error_color']}] {err}"
+        )
         sys.exit(1)
 
 
@@ -139,7 +148,10 @@ def handle_ingest_samples(pipeline: RAGPipeline):
     """Ingest all sample documents from data/sample_documents/."""
     samples_dir = Path(config.storage.samples_dir)
     if not samples_dir.exists():
-        console.print(f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] Sample documents directory not found: {samples_dir}")
+        console.print(
+            f"[{UI_THEME['colors']['error_color']}]Error:[/{UI_THEME['colors']['error_color']}] "
+            f"Sample documents directory not found: {samples_dir}"
+        )
         return
 
     files = sorted(list(samples_dir.glob("*.txt")) + list(samples_dir.glob("*.pdf")))
@@ -147,14 +159,19 @@ def handle_ingest_samples(pipeline: RAGPipeline):
         console.print(f"[yellow]No sample documents found in {samples_dir}[/yellow]")
         return
 
-    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting {len(files)} Sample Documents ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(
+        f"\n[{UI_THEME['colors']['success_color']}]=== Ingesting {len(files)} Sample Documents "
+        f"===[/{UI_THEME['colors']['success_color']}]"
+    )
     for f in files:
         handle_ingest(pipeline, str(f))
 
 
 def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = False, top_k: int = None):
     """Submit a question to the RAG pipeline and display transparent results."""
-    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Processing Question ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(
+        f"\n[{UI_THEME['colors']['success_color']}]=== Processing Question ===[/{UI_THEME['colors']['success_color']}]"
+    )
     console.print(f"[{UI_THEME['colors']['info_color']}]Question:[/{UI_THEME['colors']['info_color']}] {question}\n")
 
     try:
@@ -166,7 +183,9 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 1. Retrieved Context Table
         if res.retrieved_chunks:
-            ret_table = Table(title="Retrieved Context Chunks (ChromaDB)", border_style=UI_THEME["colors"]["table_accent_border"])
+            ret_table = Table(
+                title="Retrieved Context Chunks (ChromaDB)", border_style=UI_THEME["colors"]["table_accent_border"]
+            )
             ret_table.add_column("Rank", justify="center", style="bold")
             ret_table.add_column("Source", style="cyan")
             ret_table.add_column("Page", justify="center")
@@ -188,8 +207,17 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 2. Inspect Augmented Prompt if requested
         if inspect_prompt:
-            console.print(f"\n[{UI_THEME['colors']['warning_border']}]=== Inspecting Augmented Prompt ===[/{UI_THEME['colors']['warning_border']}]")
-            console.print(Panel(res.prompt.full_prompt_text, title="Augmented Prompt", border_style=UI_THEME["colors"]["warning_border"]))
+            console.print(
+                f"\n[{UI_THEME['colors']['warning_border']}]=== Inspecting Augmented Prompt "
+                f"===[/{UI_THEME['colors']['warning_border']}]"
+            )
+            console.print(
+                Panel(
+                    res.prompt.full_prompt_text,
+                    title="Augmented Prompt",
+                    border_style=UI_THEME["colors"]["warning_border"],
+                )
+            )
 
         # 3. Grounded Answer Panel
         ans_color = UI_THEME["colors"]["warning_border"] if res.is_refusal else UI_THEME["colors"]["banner_border"]
@@ -216,11 +244,15 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
 
         # 5. Metadata summary
         console.print(
-            f"[dim]Model: {res.generation.model} | Latency: {res.duration_ms:.1f}ms | Tokens: {res.generation.total_tokens} (prompt: {res.generation.prompt_tokens}, comp: {res.generation.completion_tokens})[/dim]\n"
+            f"[dim]Model: {res.generation.model} | Latency: {res.duration_ms:.1f}ms | "
+            f"Tokens: {res.generation.total_tokens} (prompt: {res.generation.prompt_tokens}, "
+            f"comp: {res.generation.completion_tokens})[/dim]\n"
         )
 
     except Exception as err:
-        console.print(f"\n[{UI_THEME['colors']['error_color']}]Query Failed:[/{UI_THEME['colors']['error_color']}] {err}")
+        console.print(
+            f"\n[{UI_THEME['colors']['error_color']}]Query Failed:[/{UI_THEME['colors']['error_color']}] {err}"
+        )
 
 
 def handle_status(pipeline: RAGPipeline):
@@ -259,7 +291,10 @@ def handle_status(pipeline: RAGPipeline):
 
 def handle_evaluate(pipeline: RAGPipeline):
     """Run the 8-10 benchmark test cases and display formatted results."""
-    console.print(f"\n[{UI_THEME['colors']['success_color']}]=== Running Automated RAG Evaluation Benchmark ===[/{UI_THEME['colors']['success_color']}]")
+    console.print(
+        f"\n[{UI_THEME['colors']['success_color']}]=== Running Automated RAG Evaluation Benchmark "
+        f"===[/{UI_THEME['colors']['success_color']}]"
+    )
     evaluator = RAGEvaluator(pipeline)
     report = evaluator.run_benchmark()
 
@@ -300,14 +335,19 @@ def handle_evaluate(pipeline: RAGPipeline):
     summary_text = Text()
     summary_text.append(f"Total Tests: {report.total_tests}  |  ", style="bold")
     summary_text.append(f"Passed: {report.passed_tests}  |  ", style=UI_THEME["colors"]["success_color"])
-    summary_text.append(f"Failed: {report.failed_tests}  |  ", style=UI_THEME["colors"]["error_color"] if report.failed_tests > 0 else UI_THEME["colors"]["success_color"])
+    summary_text.append(
+        f"Failed: {report.failed_tests}  |  ",
+        style=UI_THEME["colors"]["error_color"] if report.failed_tests > 0 else UI_THEME["colors"]["success_color"],
+    )
     summary_text.append(f"Pass Rate: {report.pass_rate_pct:.1f}%\n", style=UI_THEME["colors"]["info_color"])
     summary_text.append(f"Retrieval Accuracy: {report.retrieval_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Grounding Accuracy: {report.grounding_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Refusal Accuracy: {report.refusal_accuracy_pct:.1f}%  |  ", style="white")
     summary_text.append(f"Avg Latency: {report.avg_latency_ms:.1f}ms", style="white")
 
-    console.print(Panel(summary_text, title="Evaluation Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"]))
+    console.print(
+        Panel(summary_text, title="Evaluation Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"])
+    )
 
 
 def handle_interactive(pipeline: RAGPipeline):
@@ -316,7 +356,10 @@ def handle_interactive(pipeline: RAGPipeline):
     bullet = UI_THEME["icons"]["bullet"]
     arrow = UI_THEME["icons"]["prompt_arrow"]
 
-    console.print(f"\n[{UI_THEME['colors']['info_color']}]Interactive Orpheus Shell.[/{UI_THEME['colors']['info_color']}] Type your question, or commands:")
+    console.print(
+        f"\n[{UI_THEME['colors']['info_color']}]Interactive Orpheus Shell."
+        f"[/{UI_THEME['colors']['info_color']}] Type your question, or commands:"
+    )
     console.print(f"  [dim]{bullet} ':status'    - View vector store status[/dim]")
     console.print(f"  [dim]{bullet} ':eval'      - Run benchmark evaluation[/dim]")
     console.print(f"  [dim]{bullet} ':samples'   - Ingest sample documents[/dim]")
@@ -409,7 +452,10 @@ def main():
     elif args.command == "reset":
         print_banner()
         pipeline.vector_store.reset_collection()
-        console.print(f"[{UI_THEME['colors']['success_color']}]Vector database collection reset successfully.[/{UI_THEME['colors']['success_color']}]")
+        console.print(
+            f"[{UI_THEME['colors']['success_color']}]Vector database collection reset successfully."
+            f"[/{UI_THEME['colors']['success_color']}]"
+        )
     elif args.command == "interactive" or args.command is None:
         handle_interactive(pipeline)
     else:

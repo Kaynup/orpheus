@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
 
 class FileValidationError(Exception):
     """Raised when an uploaded or ingested file fails validation."""
+
     pass
 
 
@@ -48,9 +48,7 @@ def validate_file(
 
     effective_max_bytes = max_bytes if max_bytes is not None else config.storage.max_file_size_bytes
     effective_extensions: Set[str] = (
-        set(allowed_extensions)
-        if allowed_extensions is not None
-        else set(config.storage.allowed_extensions)
+        set(allowed_extensions) if allowed_extensions is not None else set(config.storage.allowed_extensions)
     )
 
     path = Path(file_path)
@@ -64,16 +62,15 @@ def validate_file(
         raise FileValidationError("File is empty (0 bytes).")
     if size > effective_max_bytes:
         raise FileValidationError(
-            f"File size ({size / (1024*1024):.2f}MB) exceeds maximum limit of "
-            f"{effective_max_bytes / (1024*1024):.0f}MB."
+            f"File size ({size / (1024 * 1024):.2f}MB) exceeds maximum limit of "
+            f"{effective_max_bytes / (1024 * 1024):.0f}MB."
         )
 
     # Check extension
     ext = path.suffix.lower()
     if ext not in effective_extensions:
         raise FileValidationError(
-            f"Unsupported file type '{ext}'. Allowed extensions: "
-            f"{', '.join(sorted(effective_extensions))}"
+            f"Unsupported file type '{ext}'. Allowed extensions: {', '.join(sorted(effective_extensions))}"
         )
 
     # Magic byte / content validation

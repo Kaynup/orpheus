@@ -9,8 +9,6 @@ from typing import Any, Dict, List, Optional
 from app.logging_config import logger
 from app.retrieval.retriever import RetrievedChunk
 
-
-
 # Asset paths
 _ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 _SYSTEM_PROMPT_PATH = _ASSETS_DIR / "prompts" / "system-prompts" / "v1_system_instruction_001.txt"
@@ -25,8 +23,7 @@ def _load_asset(path: Path) -> str:
     """
     if not path.is_file():
         raise FileNotFoundError(
-            f"Prompt asset file not found: {path}. "
-            "Ensure the assets/prompts/ directory is present and the file exists."
+            f"Prompt asset file not found: {path}. Ensure the assets/prompts/ directory is present and the file exists."
         )
     return path.read_text(encoding="utf-8").strip()
 
@@ -34,6 +31,7 @@ def _load_asset(path: Path) -> str:
 @dataclass
 class CitationInfo:
     """Metadata representing a specific cited source."""
+
     source_index: int
     filename: str
     page_number: int
@@ -55,6 +53,7 @@ class CitationInfo:
 @dataclass
 class AugmentedPrompt:
     """Inspectable representation of the prompt prepared for the LLM generation layer."""
+
     system_instruction: str
     formatted_context: str
     user_query: str

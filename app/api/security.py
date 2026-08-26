@@ -6,7 +6,8 @@ import os
 import uuid
 from pathlib import Path
 from typing import List, Optional, Tuple
-from flask import Response, request
+
+from flask import Response
 from werkzeug.datastructures import FileStorage
 
 try:

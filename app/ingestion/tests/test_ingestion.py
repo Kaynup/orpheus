@@ -1,24 +1,23 @@
 """Unit tests for document validation and ingestion parser."""
 
-import tempfile
 import uuid
 from pathlib import Path
+
 import pytest
 
 from app.config import config
+from app.ingestion.parser import (
+    PARSER_REGISTRY,
+    BaseDocumentParser,
+    PageContent,
+    ParsedDocument,
+    compute_sha256,
+    parse_document,
+)
 from app.ingestion.validator import (
     FileValidationError,
     sanitize_filename,
     validate_file,
-)
-from app.ingestion.parser import (
-    BaseDocumentParser,
-    DocumentParsingError,
-    PageContent,
-    PARSER_REGISTRY,
-    ParsedDocument,
-    compute_sha256,
-    parse_document,
 )
 
 
@@ -116,7 +115,6 @@ def test_parse_valid_txt(tmp_path):
     assert doc.doc_id == expected_doc_id
 
 
-
 def test_parser_registry_dynamic_extensibility(tmp_path):
     """Verify Open-Closed Principle: registering a custom format strategy without editing dispatch code."""
     custom_ext = ".customdoc"
@@ -160,4 +158,3 @@ def test_parse_unsupported_extension_error(tmp_path):
 
     with pytest.raises(FileValidationError, match="Unsupported file type"):
         parse_document(unmapped_file)
-

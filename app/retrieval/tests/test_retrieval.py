@@ -1,6 +1,7 @@
 """Unit tests for semantic retrieval and confidence thresholding."""
 
 import pytest
+
 from app.chunking.text_splitter import TextChunk
 from app.retrieval.retriever import SemanticRetriever
 from app.storage.vector_store import VectorStore
@@ -96,4 +97,3 @@ def test_retrieval_output_properties(populated_retriever):
     assert len(out.chunks) > 0
     assert out.highest_similarity == pytest.approx(max(c.similarity for c in out.chunks))
     assert out.lowest_distance == pytest.approx(min(c.distance for c in out.chunks))
-

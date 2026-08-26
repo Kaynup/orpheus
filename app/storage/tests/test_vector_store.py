@@ -1,6 +1,5 @@
 """Unit tests for persistent ChromaDB storage and deduplication."""
 
-import tempfile
 import pytest
 
 from app.chunking.text_splitter import TextChunk
@@ -164,4 +163,3 @@ def test_vector_store_similarity_delegation(temp_vector_store):
     raw_dist = res["distance"]
     expected_sim = temp_vector_store.embedding_manager.distance_to_similarity(raw_dist)
     assert res["similarity"] == pytest.approx(expected_sim)
-

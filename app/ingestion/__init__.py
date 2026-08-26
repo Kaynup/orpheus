@@ -1,11 +1,11 @@
 """Ingestion package exports."""
 
 from app.ingestion.parser import (
+    PARSER_REGISTRY,
     BaseDocumentParser,
     DocumentParsingError,
     PageContent,
     ParsedDocument,
-    PARSER_REGISTRY,
     PDFDocumentParser,
     TXTDocumentParser,
     parse_document,

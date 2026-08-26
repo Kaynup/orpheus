@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env if present
@@ -18,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 @dataclass
 class ChunkConfig:
     """Settings for text chunking."""
+
     chunk_size: int = 500
     chunk_overlap: int = 50
     separators: List[str] = field(default_factory=lambda: ["\n\n", "\n", ". ", "? ", "! ", " ", ""])
@@ -30,6 +32,7 @@ class ChunkConfig:
 @dataclass
 class RetrievalConfig:
     """Settings for semantic retrieval."""
+
     top_k: int = 3
     # Distance threshold (lower distance means higher semantic similarity)
     # Documents with distance > score_threshold are considered low confidence
@@ -39,6 +42,7 @@ class RetrievalConfig:
 @dataclass
 class LLMConfig:
     """Settings for LLM generation via LiteLLM."""
+
     model: str = "gemini/gemini-1.5-flash"
     temperature: float = 0.2
     max_tokens: int = 1024
@@ -54,6 +58,7 @@ class LLMConfig:
 @dataclass
 class StorageConfig:
     """Settings for persistent ChromaDB and uploads."""
+
     persist_dir: str = str(BASE_DIR / "data" / "chroma_db")
     collection_name: str = "doc_qa_collection"
     upload_dir: str = str(BASE_DIR / "data" / "uploads")
@@ -69,6 +74,7 @@ class StorageConfig:
 @dataclass
 class ServerConfig:
     """Settings for Flask web server."""
+
     host: str = "127.0.0.1"
     port: int = 5000
     debug: bool = False
@@ -85,12 +91,13 @@ class ServerConfig:
     )
 
 
-from app.version import __version__
+from app.version import __version__  # noqa: E402
 
 
 @dataclass
 class AppConfig:
     """Master application configuration."""
+
     version: str = __version__
     chunk: ChunkConfig = field(default_factory=ChunkConfig)
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)

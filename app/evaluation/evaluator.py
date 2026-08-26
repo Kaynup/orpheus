@@ -15,6 +15,7 @@ from app.pipeline.rag_pipeline import QueryResult, RAGPipeline
 @dataclass
 class TestCaseResult:
     """Detailed outcome of a single evaluation test case."""
+
     __test__ = False
     test_id: str
     question: str
@@ -53,6 +54,7 @@ class TestCaseResult:
 @dataclass
 class EvaluationReport:
     """Comprehensive evaluation benchmark report."""
+
     total_tests: int
     passed_tests: int
     failed_tests: int
@@ -105,9 +107,15 @@ class RAGEvaluator:
         # 1. Evaluate Refusal behavior
         if test_case.should_refuse:
             # Must refuse out-of-scope/unsupported questions
-            refusal_passed = is_refusal or "insufficient information" in answer_text.lower() or "not have sufficient" in answer_text.lower()
+            refusal_passed = (
+                is_refusal
+                or "insufficient information" in answer_text.lower()
+                or "not have sufficient" in answer_text.lower()
+            )
             if not refusal_passed:
-                failure_reasons.append("Expected refusal on unsupported question, but model generated ungrounded answer.")
+                failure_reasons.append(
+                    "Expected refusal on unsupported question, but model generated ungrounded answer."
+                )
             retrieval_passed = True  # Irrelevant retrieval is expected/permitted for out of scope
             grounding_passed = refusal_passed
             citation_passed = True
@@ -145,7 +153,8 @@ class RAGEvaluator:
 
             if not grounding_passed:
                 failure_reasons.append(
-                    f"Answer missing expected factual keywords: {test_case.expected_keywords} (found: {matched_keywords})"
+                    f"Answer missing expected factual keywords: {test_case.expected_keywords} "
+                    f"(found: {matched_keywords})"
                 )
 
             # 4. Evaluate Citation presence

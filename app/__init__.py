@@ -11,8 +11,10 @@ except ImportError:
 
 # 2. Compatibility shim for typing.NotRequired in Python 3.10
 import typing
+
 try:
     import typing_extensions
+
     if not hasattr(typing, "NotRequired"):
         typing.NotRequired = getattr(typing_extensions, "NotRequired", None)
     if not hasattr(typing, "Required"):

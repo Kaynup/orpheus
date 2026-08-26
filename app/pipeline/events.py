@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
 
 class EventStage(str, Enum):
@@ -40,6 +40,7 @@ class EventStatus(str, Enum):
 @dataclass
 class PipelineEvent:
     """Represents an atomic backend state transition event."""
+
     stage: EventStage
     status: EventStatus
     message: str

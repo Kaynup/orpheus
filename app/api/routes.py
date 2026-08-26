@@ -6,10 +6,9 @@ import json
 import os
 import queue
 import threading
-import time
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, Generator
+
 from dotenv import load_dotenv
 from flask import Blueprint, Response, jsonify, render_template, request, send_file
 
@@ -17,7 +16,7 @@ from app.api.security import save_uploaded_file
 from app.config import config
 from app.evaluation.evaluator import RAGEvaluator
 from app.logging_config import logger
-from app.pipeline.events import EventStage, EventStatus, PipelineEvent
+from app.pipeline.events import PipelineEvent
 from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
 
 api_bp = Blueprint("api", __name__)
@@ -120,23 +119,27 @@ def get_available_models() -> list[dict[str, str]]:
                         details = item.get("details") or {}
                         param_size = details.get("parameter_size")
                         badge_text = f"Local ({param_size})" if param_size else "Local Service"
-                        add_model({
-                            "id": model_id,
-                            "name": f"Ollama / {clean_tag}",
-                            "provider": "Ollama Local",
-                            "badge": badge_text,
-                        })
+                        add_model(
+                            {
+                                "id": model_id,
+                                "name": f"Ollama / {clean_tag}",
+                                "provider": "Ollama Local",
+                                "badge": badge_text,
+                            }
+                        )
                     break
         except Exception:
             continue
 
     # 3. Always include Offline Grounded Extractor
-    add_model({
-        "id": "offline",
-        "name": "Offline Grounded Extractor",
-        "provider": "Local Extractor",
-        "badge": "No Key Required",
-    })
+    add_model(
+        {
+            "id": "offline",
+            "name": "Offline Grounded Extractor",
+            "provider": "Local Extractor",
+            "badge": "No Key Required",
+        }
+    )
 
     return models
 
@@ -174,6 +177,7 @@ def favicon():
         if root_favicon.exists():
             try:
                 import shutil
+
                 assets_dir.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(root_favicon, favicon_path)
             except Exception:
@@ -204,22 +208,26 @@ def get_status():
 
     current_default_model = os.getenv("LLM_MODEL") or config.llm.model
 
-    return jsonify({
-        "status": "ready",
-        "version": config.version,
-        "vector_store": stats,
-        "sample_files": sample_files,
-        "available_models": get_available_models(),
-        "config": {
-            "default_model": current_default_model,
-            "default_top_k": config.retrieval.top_k,
-            "default_chunk_size": config.chunk.chunk_size,
-            "default_chunk_overlap": config.chunk.chunk_overlap,
-            "has_gemini_key": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or config.llm.gemini_api_key),
-            "has_openrouter_key": bool(os.getenv("OPENROUTER_API_KEY") or config.llm.openrouter_api_key),
-            "has_openai_key": bool(os.getenv("OPENAI_API_KEY") or config.llm.openai_api_key),
-        },
-    })
+    return jsonify(
+        {
+            "status": "ready",
+            "version": config.version,
+            "vector_store": stats,
+            "sample_files": sample_files,
+            "available_models": get_available_models(),
+            "config": {
+                "default_model": current_default_model,
+                "default_top_k": config.retrieval.top_k,
+                "default_chunk_size": config.chunk.chunk_size,
+                "default_chunk_overlap": config.chunk.chunk_overlap,
+                "has_gemini_key": bool(
+                    os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or config.llm.gemini_api_key
+                ),
+                "has_openrouter_key": bool(os.getenv("OPENROUTER_API_KEY") or config.llm.openrouter_api_key),
+                "has_openai_key": bool(os.getenv("OPENAI_API_KEY") or config.llm.openai_api_key),
+            },
+        }
+    )
 
 
 @api_bp.route("/api/documents", methods=["GET"])

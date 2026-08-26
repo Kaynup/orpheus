@@ -1,8 +1,11 @@
-"""End-to-end integration tests for RAG pipeline, event streaming, multi-document lifecycle, and anti-hallucination guardrails."""
+"""End-to-end integration tests for RAG pipeline, event streaming,
+multi-document lifecycle, and anti-hallucination guardrails.
+"""
 
 import pytest
+
 from app.config import AppConfig
-from app.pipeline.events import EventStage, EventStatus, PipelineEvent
+from app.pipeline.events import EventStage
 from app.pipeline.rag_pipeline import RAGPipeline
 
 
@@ -49,7 +52,9 @@ def test_pipeline_unsupported_query_guardrail(populated_pipeline):
     result = populated_pipeline.answer_query("What is the policy for traveling to Alpha Centauri?")
     assert result.is_refusal is True
     assert len(result.citations) == 0
-    assert "not have sufficient information" in result.answer.lower() or "sufficient information" in result.answer.lower()
+    assert (
+        "not have sufficient information" in result.answer.lower() or "sufficient information" in result.answer.lower()
+    )
 
 
 def test_pipeline_event_streaming_callback(tmp_path):
@@ -110,7 +115,7 @@ def test_pipeline_multi_document_lifecycle_and_deletion(tmp_path):
     # Ingest Doc B (Cloud)
     doc_b = tmp_path / "cloud_doc.txt"
     doc_b.write_text("High availability cloud guarantee allows 4.38 minutes of monthly downtime.", encoding="utf-8")
-    res_b = pipeline.ingest_document(doc_b)
+    pipeline.ingest_document(doc_b)
 
     # Query Doc A
     q_a = pipeline.answer_query("How many weeks of parental leave are provided?")

@@ -1,13 +1,17 @@
 """Unit tests for recursive boundary-aware text chunking and provenance."""
 
 import pytest
+
 from app.chunking.text_splitter import RecursiveTextSplitter, TextChunk
 from app.chunking.tokenizer import estimate_tokens
 from app.ingestion.parser import PageContent, ParsedDocument
 
 
 def test_chunking_provenance():
-    sample_text = "Paragraph 1 is here.\n\nParagraph 2 is here with more detailed information.\n\nParagraph 3 contains extra guidelines."
+    sample_text = (
+        "Paragraph 1 is here.\n\nParagraph 2 is here with more detailed information.\n\n"
+        "Paragraph 3 contains extra guidelines."
+    )
     doc = ParsedDocument(
         doc_id="test-doc-123",
         filename="handbook.txt",
@@ -118,4 +122,3 @@ def test_configurable_separators():
     assert chunks[0].content == "A"
     assert chunks[1].content == "B"
     assert chunks[2].content == "C"
-

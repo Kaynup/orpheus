@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
+
 from flask import Flask
 
 # Compatibility shims for Python 3.10 and older Linux sqlite3
 try:
     __import__("pysqlite3")
     import sys
+
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except ImportError:
     pass
 
 import typing
+
 try:
     import typing_extensions
+
     if not hasattr(typing, "NotRequired"):
         typing.NotRequired = getattr(typing_extensions, "NotRequired", None)
     if not hasattr(typing, "Required"):

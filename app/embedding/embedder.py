@@ -5,9 +5,12 @@ from __future__ import annotations
 try:
     __import__("pysqlite3")
     import sys
+
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except ImportError:
     pass
+
+from typing import List
 
 import chromadb.utils.embedding_functions as ef
 
@@ -25,14 +28,14 @@ class EmbeddingManager:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         self.model_name = model_name
         logger.info("Initializing EmbeddingManager with model: %s", model_name)
-        
+
         if self.model_name == "all-MiniLM-L6-v2":
             self._ef = ef.DefaultEmbeddingFunction()
         else:
             # Fallback for future models or external providers
             logger.warning("Model %s not explicitly mapped, falling back to DefaultEmbeddingFunction", model_name)
             self._ef = ef.DefaultEmbeddingFunction()
-            
+
     @property
     def dimension(self) -> int:
         """Return the vector dimension of the current embedding model."""
@@ -55,7 +58,7 @@ class EmbeddingManager:
             return max(0.0, 1.0 - distance)
         elif metric == "l2":
             return 1.0 / (1.0 + distance)
-        
+
         # Default fallback
         return max(0.0, 1.0 - distance)
 

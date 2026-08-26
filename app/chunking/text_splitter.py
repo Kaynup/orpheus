@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import re
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from app.chunking.tokenizer import estimate_tokens
-from app.config import ChunkConfig, config
+from app.config import config
 from app.ingestion.parser import ParsedDocument
 from app.logging_config import logger
 
@@ -16,6 +14,7 @@ from app.logging_config import logger
 @dataclass
 class TextChunk:
     """Represents a discrete text chunk derived from a document with full metadata."""
+
     chunk_id: str
     chunk_index: int
     content: str
@@ -77,7 +76,7 @@ class RecursiveTextSplitter:
                 break
             if sep in text:
                 separator = sep
-                new_separators = separators[i + 1:]
+                new_separators = separators[i + 1 :]
                 break
 
         splits = text.split(separator) if separator else list(text)
@@ -95,7 +94,7 @@ class RecursiveTextSplitter:
                 else:
                     # Hard slice if no more separators exist
                     for j in range(0, len(s), self.chunk_size - self.chunk_overlap):
-                        good_splits.append(s[j:j + self.chunk_size])
+                        good_splits.append(s[j : j + self.chunk_size])
 
         # Merge splits with overlap
         current_chunk: List[str] = []

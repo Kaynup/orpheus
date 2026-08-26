@@ -1,16 +1,16 @@
 """Unit tests for Flask API endpoints and security headers."""
 
 import io
-import pytest
-from app.main import create_app
 
+import pytest
+from werkzeug.datastructures import FileStorage
 
 from app.api.security import save_uploaded_file, setup_cors
 from app.config import config
 from app.ingestion.validator import FileValidationError
+from app.main import create_app
 from app.pipeline.rag_pipeline import RAGPipeline
 from app.version import __version__
-from werkzeug.datastructures import FileStorage
 
 
 @pytest.fixture
@@ -49,15 +49,13 @@ def test_api_query_empty(client):
 
 
 def test_api_upload_invalid_type(client):
-    data = {
-        "file": (io.BytesIO(b"import os; os.system('ls')"), "malicious.py")
-    }
+    data = {"file": (io.BytesIO(b"import os; os.system('ls')"), "malicious.py")}
     res = client.post("/api/ingest", data=data, content_type="multipart/form-data")
     assert res.status_code == 400
     assert "Unsupported file type" in res.get_json()["error"]
 
 
-from app.api.security import CORS, save_uploaded_file, setup_cors
+from app.api.security import CORS  # noqa: E402
 
 
 @pytest.mark.skipif(CORS is None, reason="flask-cors package is not installed in the environment")
@@ -154,4 +152,3 @@ def test_save_uploaded_file_empty_file_rejected(tmp_path):
 
     # Assert no remnant file was left in the upload directory
     assert len(list(tmp_path.glob("*"))) == 0
-

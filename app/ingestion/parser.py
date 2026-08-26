@@ -22,12 +22,14 @@ from app.logging_config import logger
 
 class DocumentParsingError(Exception):
     """Raised when parsing fails on a malformed or corrupted document."""
+
     pass
 
 
 @dataclass
 class PageContent:
     """Represents a discrete section or page from a document."""
+
     page_number: int
     text: str
     char_count: int
@@ -36,6 +38,7 @@ class PageContent:
 @dataclass
 class ParsedDocument:
     """Full representation of an ingested document with source provenance."""
+
     doc_id: str
     filename: str
     file_type: str
@@ -70,8 +73,8 @@ def compute_sha256(path: Path, buffer_size: int = 0) -> str:
     return hasher.hexdigest()
 
 
-
 # Parser Strategy Abstraction
+
 
 class BaseDocumentParser(ABC):
     """Abstract base class for all document format parsers."""
@@ -91,9 +94,7 @@ class TXTDocumentParser(BaseDocumentParser):
                 text = f.read()
         except Exception as err:
             logger.error("Failed to read text file %s: %s", file_path, err)
-            raise DocumentParsingError(
-                f"Could not read text file '{file_path.name}': {err}"
-            ) from err
+            raise DocumentParsingError(f"Could not read text file '{file_path.name}': {err}") from err
 
         checksum = compute_sha256(file_path)
         clean_text = text.strip()
@@ -138,9 +139,7 @@ class PDFDocumentParser(BaseDocumentParser):
                 )
         except Exception as err:
             logger.error("Failed to parse PDF %s: %s", file_path, err)
-            raise DocumentParsingError(
-                f"Failed to parse PDF document '{file_path.name}': {err}"
-            ) from err
+            raise DocumentParsingError(f"Failed to parse PDF document '{file_path.name}': {err}") from err
 
         return ParsedDocument(
             doc_id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"file://{checksum}")),
@@ -154,7 +153,6 @@ class PDFDocumentParser(BaseDocumentParser):
         )
 
 
-
 # Parser Registry — extend here to support new formats without editing below
 
 PARSER_REGISTRY: Dict[str, BaseDocumentParser] = {
@@ -164,6 +162,7 @@ PARSER_REGISTRY: Dict[str, BaseDocumentParser] = {
 
 
 # Backward-compatible module-level functions (thin wrappers)
+
 
 def parse_txt(file_path: Path) -> ParsedDocument:
     """Parse a plain text file into a ParsedDocument. (Backward-compatible wrapper.)"""
@@ -188,7 +187,9 @@ def parse_document(file_path: str | Path) -> ParsedDocument:
     ext = path.suffix.lower()
     logger.info(
         "Parsing document: %s (type: %s, size: %d bytes)",
-        path.name, ext, path.stat().st_size,
+        path.name,
+        ext,
+        path.stat().st_size,
     )
 
     parser = PARSER_REGISTRY.get(ext)

@@ -1,8 +1,8 @@
 """Retrieval package exports."""
 
 from app.retrieval.retriever import (
-    RetrievedChunk,
     RetrievalOutput,
+    RetrievedChunk,
     SemanticRetriever,
 )
 

@@ -1,0 +1,26 @@
+[tool.ruff]
+# Set the maximum line length to 120
+line-length = 120
+
+# Assume Python 3.10
+target-version = "py310"
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".pytest_cache",
+    "__pycache__",
+    "data",
+    "env",
+    "venv",
+    ".venv",
+]
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`), pycodestyle (`E`, `W`), and isort (`I`)
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.ruff.lint.isort]
+# Ensure imports are sorted and grouped properly
+known-first-party = ["app"]

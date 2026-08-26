@@ -1,6 +1,7 @@
 """Unit tests for the RAG benchmark evaluation suite and metric scoring dimensions."""
 
 import pytest
+
 from app.config import AppConfig
 from app.evaluation.evaluator import EvaluationReport, RAGEvaluator, TestCaseResult
 from app.evaluation.test_dataset import EvaluationTestCase

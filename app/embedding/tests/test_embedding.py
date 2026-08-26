@@ -1,6 +1,7 @@
 """Unit tests for EmbeddingManager verifying mathematical invariants, metric delegation, and embedding dimensions."""
 
 import pytest
+
 from app.config import config
 from app.embedding.embedder import EmbeddingManager
 
@@ -35,7 +36,7 @@ def test_distance_to_similarity_mathematical_invariants(embedding_manager):
     distances = [0.1, 0.3, 0.6, 0.9, 1.5]
     similarities = [embedding_manager.distance_to_similarity(d) for d in distances]
     for i in range(len(similarities) - 1):
-        assert similarities[i] >= similarities[i + 1], f"Expected sim({distances[i]}) >= sim({distances[i+1]})"
+        assert similarities[i] >= similarities[i + 1], f"Expected sim({distances[i]}) >= sim({distances[i + 1]})"
 
 
 def test_distance_to_similarity_across_supported_metrics(monkeypatch, embedding_manager):

@@ -1,17 +1,15 @@
 """Unit tests for LLMGenerator, offline fallback extraction, NLP assets, and telemetry."""
 
-import os
-from pathlib import Path
 import pytest
 
 from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
-from app.config import LLMConfig, config
+from app.config import LLMConfig
 from app.generation.generator import (
+    ANCHOR_TERMS,
     DEFAULT_REFUSAL_TEXT,
+    STOPWORDS,
     GenerationResult,
     LLMGenerator,
-    STOPWORDS,
-    ANCHOR_TERMS,
     _load_json_asset,
 )
 
@@ -31,6 +29,7 @@ def test_generator_telemetry_configuration():
     """Verify LiteLLM telemetry toggle matches dynamic LLM configuration."""
     gen = LLMGenerator()
     import litellm
+
     assert litellm.suppress_debug_info == getattr(gen.config, "suppress_debug_info", True)
 
 
@@ -103,7 +102,10 @@ def test_generator_offline_extractive_grounding_and_sentence_limit(offline_gener
             page_number=1,
             chunk_id="c1",
             similarity=0.9,
-            snippet="Core hours are 10:00 AM to 3:00 PM. Stipend is $750. In-office days are Tuesdays and Thursdays. Vacation is 20 days.",
+            snippet=(
+                "Core hours are 10:00 AM to 3:00 PM. Stipend is $750. "
+                "In-office days are Tuesdays and Thursdays. Vacation is 20 days."
+            ),
         )
     }
     context_text = (
@@ -131,6 +133,7 @@ def test_generator_offline_extractive_grounding_and_sentence_limit(offline_gener
 
     # Sentence limit check: max 2 sentences configured in fixture
     import re
+
     clean_text = re.sub(r"\[Source[^\]]+\]", "", result.answer).strip()
     raw_sentences = [s.strip() for s in clean_text.split(".") if s.strip()]
     assert len(raw_sentences) <= offline_generator.config.offline_max_sentences

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +9,7 @@ from typing import Any, Dict, List, Optional
 try:
     __import__("pysqlite3")
     import sys
+
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except ImportError:
     pass
@@ -18,13 +18,14 @@ import chromadb
 from chromadb.config import Settings
 
 from app.chunking.text_splitter import TextChunk
-from app.config import StorageConfig, config
+from app.config import config
 from app.embedding.embedder import EmbeddingManager
 from app.logging_config import logger
 
 
 class VectorStoreError(Exception):
     """Raised when vector database operations fail."""
+
     pass
 
 
@@ -118,14 +119,19 @@ class VectorStore:
                 for chunk in chunks
             ]
 
-            batch_size = getattr(config.storage, 'batch_size', 1000)
-            logger.info("Persisting %d chunks into collection '%s' in batches of %d...", len(chunks), self.collection_name, batch_size)
-            
+            batch_size = getattr(config.storage, "batch_size", 1000)
+            logger.info(
+                "Persisting %d chunks into collection '%s' in batches of %d...",
+                len(chunks),
+                self.collection_name,
+                batch_size,
+            )
+
             for i in range(0, len(ids), batch_size):
                 self._collection.add(
-                    ids=ids[i:i + batch_size],
-                    documents=documents[i:i + batch_size],
-                    metadatas=metadatas[i:i + batch_size],
+                    ids=ids[i : i + batch_size],
+                    documents=documents[i : i + batch_size],
+                    metadatas=metadatas[i : i + batch_size],
                 )
             logger.info(
                 "Successfully persisted %d chunks for '%s'. Total collection chunks now: %d",
@@ -180,24 +186,24 @@ class VectorStore:
             metas = results.get("metadatas", [[]])[0]
             distances = results.get("distances", [[]])[0]
 
-            for rank, (chunk_id, doc_text, meta, distance) in enumerate(
-                zip(ids, docs, metas, distances), start=1
-            ):
+            for rank, (chunk_id, doc_text, meta, distance) in enumerate(zip(ids, docs, metas, distances), start=1):
                 # Metric-agnostic similarity conversion
                 similarity_score = self.embedding_manager.distance_to_similarity(float(distance))
 
-                formatted_results.append({
-                    "rank": rank,
-                    "chunk_id": chunk_id,
-                    "content": doc_text,
-                    "distance": float(distance),
-                    "similarity": similarity_score,
-                    "metadata": meta,
-                    "doc_id": meta.get("doc_id", ""),
-                    "source_filename": meta.get("source_filename", "unknown"),
-                    "page_number": meta.get("page_number", 1),
-                    "chunk_index": meta.get("chunk_index", 0),
-                })
+                formatted_results.append(
+                    {
+                        "rank": rank,
+                        "chunk_id": chunk_id,
+                        "content": doc_text,
+                        "distance": float(distance),
+                        "similarity": similarity_score,
+                        "metadata": meta,
+                        "doc_id": meta.get("doc_id", ""),
+                        "source_filename": meta.get("source_filename", "unknown"),
+                        "page_number": meta.get("page_number", 1),
+                        "chunk_index": meta.get("chunk_index", 0),
+                    }
+                )
 
             logger.info(
                 "Search for '%.50s' returned %d chunks (top similarity: %.3f, top distance: %.3f)",
@@ -242,14 +248,16 @@ class VectorStore:
             # Convert sets to page counts
             result = []
             for doc in docs_summary.values():
-                result.append({
-                    "doc_id": doc["doc_id"],
-                    "filename": doc["filename"],
-                    "file_type": doc["file_type"],
-                    "chunk_count": doc["chunk_count"],
-                    "page_count": len(doc["pages"]),
-                    "total_tokens_estimate": doc["total_tokens_estimate"],
-                })
+                result.append(
+                    {
+                        "doc_id": doc["doc_id"],
+                        "filename": doc["filename"],
+                        "file_type": doc["file_type"],
+                        "chunk_count": doc["chunk_count"],
+                        "page_count": len(doc["pages"]),
+                        "total_tokens_estimate": doc["total_tokens_estimate"],
+                    }
+                )
 
             result.sort(key=lambda x: x["filename"].lower())
             return result

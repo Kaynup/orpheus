@@ -9,9 +9,9 @@ from typing import Optional
 
 # Masking pattern for API keys or secrets
 SECRET_PATTERNS = [
-    re.compile(r"(AIza[0-9A-Za-z-_]{35})"),           # Google/Gemini key pattern
-    re.compile(r"(sk-or-v1-[0-9a-fA-F]{64})"),       # OpenRouter key pattern
-    re.compile(r"(sk-[a-zA-Z0-9]{32,})"),            # OpenAI / generic key pattern
+    re.compile(r"(AIza[0-9A-Za-z-_]{35})"),  # Google/Gemini key pattern
+    re.compile(r"(sk-or-v1-[0-9a-fA-F]{64})"),  # OpenRouter key pattern
+    re.compile(r"(sk-[a-zA-Z0-9]{32,})"),  # OpenAI / generic key pattern
     re.compile(r"(Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*)"),
 ]
 

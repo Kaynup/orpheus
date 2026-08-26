@@ -26,6 +26,12 @@ eval:
 test:
 	$(PYTHON) -m pytest -v
 
+lint:
+	$(PYTHON) -m ruff check app tests cli.py
+
+format:
+	$(PYTHON) -m ruff format app tests cli.py
+
 clean-cache:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__ .pytest_cache/
 	echo "\ncleared cache\n"

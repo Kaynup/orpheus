@@ -21,6 +21,7 @@ from app.storage.vector_store import VectorStore
 @dataclass
 class IngestionResult:
     """Full summary of document ingestion."""
+
     doc_id: str
     filename: str
     file_type: str
@@ -48,6 +49,7 @@ class IngestionResult:
 @dataclass
 class QueryResult:
     """Full summary of question answering execution."""
+
     query: str
     answer: str
     retrieved_chunks: List[RetrievedChunk]
@@ -143,8 +145,10 @@ class RAGPipeline:
 
         # Stage 1: Document Received & Validated
         self._emit_event(
-            events, event_callback,
-            EventStage.DOC_RECEIVED, EventStatus.RUNNING,
+            events,
+            event_callback,
+            EventStage.DOC_RECEIVED,
+            EventStatus.RUNNING,
             f"Receiving and validating file '{path.name}'...",
             {"filename": path.name, "file_size_bytes": path.stat().st_size if path.exists() else 0},
         )
@@ -152,15 +156,19 @@ class RAGPipeline:
         try:
             # Stage 2: Text Extracted
             self._emit_event(
-                events, event_callback,
-                EventStage.DOC_RECEIVED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.DOC_RECEIVED,
+                EventStatus.COMPLETED,
                 f"File '{path.name}' passed validation.",
                 {"filename": path.name},
             )
 
             self._emit_event(
-                events, event_callback,
-                EventStage.TEXT_EXTRACTED, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.TEXT_EXTRACTED,
+                EventStatus.RUNNING,
                 f"Extracting textual content from {path.suffix.upper()}...",
                 {"file_type": path.suffix.lower()},
             )
@@ -168,8 +176,10 @@ class RAGPipeline:
             parsed_doc: ParsedDocument = parse_document(path)
 
             self._emit_event(
-                events, event_callback,
-                EventStage.TEXT_EXTRACTED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.TEXT_EXTRACTED,
+                EventStatus.COMPLETED,
                 f"Extracted {parsed_doc.total_chars} characters across {len(parsed_doc.pages)} page(s).",
                 {
                     "doc_id": parsed_doc.doc_id,
@@ -181,9 +191,12 @@ class RAGPipeline:
 
             # Stage 3: Chunks Created
             self._emit_event(
-                events, event_callback,
-                EventStage.CHUNKS_CREATED, EventStatus.RUNNING,
-                f"Splitting text into chunks (size={chunk_size or self.config.chunk.chunk_size}, overlap={chunk_overlap if chunk_overlap is not None else self.config.chunk.chunk_overlap})...",
+                events,
+                event_callback,
+                EventStage.CHUNKS_CREATED,
+                EventStatus.RUNNING,
+                f"Splitting text into chunks (size={chunk_size or self.config.chunk.chunk_size}, "
+                f"overlap={chunk_overlap if chunk_overlap is not None else self.config.chunk.chunk_overlap})...",
             )
 
             chunks: List[TextChunk] = self.splitter.chunk_document(
@@ -194,8 +207,10 @@ class RAGPipeline:
 
             total_tokens = sum(c.token_count_estimate for c in chunks)
             self._emit_event(
-                events, event_callback,
-                EventStage.CHUNKS_CREATED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.CHUNKS_CREATED,
+                EventStatus.COMPLETED,
                 f"Created {len(chunks)} chunks with full provenance tracking.",
                 {
                     "chunk_count": len(chunks),
@@ -206,8 +221,10 @@ class RAGPipeline:
 
             # Stage 4: Embeddings Generated
             self._emit_event(
-                events, event_callback,
-                EventStage.EMBEDDINGS_GENERATED, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.EMBEDDINGS_GENERATED,
+                EventStatus.RUNNING,
                 f"Transforming {len(chunks)} chunks into semantic vector representations...",
                 {"model": self.vector_store.embedding_manager.model_name},
             )
@@ -215,24 +232,31 @@ class RAGPipeline:
             # Chroma performs embedding during add_chunks
             # We explicitly record the stage transition
             self._emit_event(
-                events, event_callback,
-                EventStage.EMBEDDINGS_GENERATED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.EMBEDDINGS_GENERATED,
+                EventStatus.COMPLETED,
                 f"Generated dense semantic embeddings for {len(chunks)} chunks.",
                 {"vector_dim": 384, "model": self.vector_store.embedding_manager.model_name},
             )
 
             # Stage 5: Vectors Stored
             self._emit_event(
-                events, event_callback,
-                EventStage.VECTORS_STORED, EventStatus.RUNNING,
-                f"Persisting vectors and chunk metadata into ChromaDB collection '{self.vector_store.collection_name}'...",
+                events,
+                event_callback,
+                EventStage.VECTORS_STORED,
+                EventStatus.RUNNING,
+                f"Persisting vectors and chunk metadata into ChromaDB collection "
+                f"'{self.vector_store.collection_name}'...",
             )
 
             inserted_count = self.vector_store.add_chunks(chunks)
 
             self._emit_event(
-                events, event_callback,
-                EventStage.VECTORS_STORED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.VECTORS_STORED,
+                EventStatus.COMPLETED,
                 f"Persisted {inserted_count} chunks to disk ({self.vector_store.persist_dir}).",
                 {"inserted_chunks": inserted_count, "collection_name": self.vector_store.collection_name},
             )
@@ -240,8 +264,10 @@ class RAGPipeline:
             # Stage 6: Indexing Complete
             duration_ms = (time.perf_counter() - start_time) * 1000
             self._emit_event(
-                events, event_callback,
-                EventStage.INDEXING_COMPLETE, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.INDEXING_COMPLETE,
+                EventStatus.COMPLETED,
                 f"Document '{parsed_doc.filename}' indexed successfully in {duration_ms:.1f}ms.",
                 {
                     "doc_id": parsed_doc.doc_id,
@@ -266,8 +292,10 @@ class RAGPipeline:
         except Exception as err:
             logger.error("Ingestion pipeline failed for '%s': %s", path.name, err)
             self._emit_event(
-                events, event_callback,
-                EventStage.PIPELINE_FAILED, EventStatus.FAILED,
+                events,
+                event_callback,
+                EventStage.PIPELINE_FAILED,
+                EventStatus.FAILED,
                 f"Ingestion failed: {err}",
                 {"error": str(err), "filename": path.name},
             )
@@ -293,8 +321,10 @@ class RAGPipeline:
 
         # Stage 1: Query Received
         self._emit_event(
-            events, event_callback,
-            EventStage.QUERY_RECEIVED, EventStatus.COMPLETED,
+            events,
+            event_callback,
+            EventStage.QUERY_RECEIVED,
+            EventStatus.COMPLETED,
             f"Received query: '{clean_query}'",
             {"query": clean_query, "char_count": len(clean_query)},
         )
@@ -302,15 +332,19 @@ class RAGPipeline:
         try:
             # Stage 2: Query Embedded
             self._emit_event(
-                events, event_callback,
-                EventStage.QUERY_EMBEDDED, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.QUERY_EMBEDDED,
+                EventStatus.RUNNING,
                 "Computing semantic embedding vector for query...",
             )
             # Embed query
             _ = self.vector_store.embedding_manager.embed_query(clean_query)
             self._emit_event(
-                events, event_callback,
-                EventStage.QUERY_EMBEDDED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.QUERY_EMBEDDED,
+                EventStatus.COMPLETED,
                 "Query transformed to 384-d semantic representation.",
                 {"embedding_model": self.vector_store.embedding_manager.model_name},
             )
@@ -320,8 +354,10 @@ class RAGPipeline:
             threshold = score_threshold if score_threshold is not None else self.config.retrieval.score_threshold
 
             self._emit_event(
-                events, event_callback,
-                EventStage.RETRIEVING_CHUNKS, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.RETRIEVING_CHUNKS,
+                EventStatus.RUNNING,
                 f"Searching vector store for top {k} nearest chunks (max distance <= {threshold})...",
                 {"top_k": k, "score_threshold": threshold},
             )
@@ -333,8 +369,10 @@ class RAGPipeline:
             )
 
             self._emit_event(
-                events, event_callback,
-                EventStage.RETRIEVING_CHUNKS, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.RETRIEVING_CHUNKS,
+                EventStatus.COMPLETED,
                 f"Retrieved {len(retrieval_output.chunks)} candidate chunk(s).",
                 {
                     "retrieved_count": len(retrieval_output.chunks),
@@ -345,17 +383,22 @@ class RAGPipeline:
 
             # Stage 4: Context Selected
             self._emit_event(
-                events, event_callback,
-                EventStage.CONTEXT_SELECTED, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.CONTEXT_SELECTED,
+                EventStatus.RUNNING,
                 "Filtering context chunks and evaluating relevance confidence...",
             )
 
             confident_chunks = [c for c in retrieval_output.chunks if c.is_confident]
 
             self._emit_event(
-                events, event_callback,
-                EventStage.CONTEXT_SELECTED, EventStatus.COMPLETED,
-                f"Selected {len(confident_chunks)} confident context chunk(s) (has_relevant={retrieval_output.has_relevant_context}).",
+                events,
+                event_callback,
+                EventStage.CONTEXT_SELECTED,
+                EventStatus.COMPLETED,
+                f"Selected {len(confident_chunks)} confident context chunk(s) "
+                f"(has_relevant={retrieval_output.has_relevant_context}).",
                 {
                     "confident_chunk_count": len(confident_chunks),
                     "has_relevant_context": retrieval_output.has_relevant_context,
@@ -365,8 +408,10 @@ class RAGPipeline:
 
             # Stage 5: Prompt Augmented
             self._emit_event(
-                events, event_callback,
-                EventStage.PROMPT_PREPARED, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.PROMPT_PREPARED,
+                EventStatus.RUNNING,
                 "Augmenting system instructions with numbered context blocks and citation placeholders...",
             )
 
@@ -376,8 +421,10 @@ class RAGPipeline:
             )
 
             self._emit_event(
-                events, event_callback,
-                EventStage.PROMPT_PREPARED, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.PROMPT_PREPARED,
+                EventStatus.COMPLETED,
                 f"Constructed prompt ({len(prompt.full_prompt_text)} chars, {len(prompt.citations_map)} sources).",
                 {
                     "prompt_char_length": len(prompt.full_prompt_text),
@@ -389,8 +436,10 @@ class RAGPipeline:
             # Stage 6: Generating Answer
             target_model = model or self.config.llm.model
             self._emit_event(
-                events, event_callback,
-                EventStage.GENERATING_ANSWER, EventStatus.RUNNING,
+                events,
+                event_callback,
+                EventStage.GENERATING_ANSWER,
+                EventStatus.RUNNING,
                 f"Generating grounded answer via {target_model}...",
                 {"model": target_model, "temperature": temperature or self.config.llm.temperature},
             )
@@ -402,8 +451,10 @@ class RAGPipeline:
             )
 
             self._emit_event(
-                events, event_callback,
-                EventStage.GENERATING_ANSWER, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.GENERATING_ANSWER,
+                EventStatus.COMPLETED,
                 f"Answer generated in {generation_res.latency_ms:.1f}ms ({generation_res.total_tokens} tokens).",
                 {
                     "latency_ms": generation_res.latency_ms,
@@ -416,8 +467,10 @@ class RAGPipeline:
             # Stage 7: Answer Complete
             duration_ms = (time.perf_counter() - start_time) * 1000
             self._emit_event(
-                events, event_callback,
-                EventStage.ANSWER_COMPLETE, EventStatus.COMPLETED,
+                events,
+                event_callback,
+                EventStage.ANSWER_COMPLETE,
+                EventStatus.COMPLETED,
                 f"QA Pipeline finished in {duration_ms:.1f}ms.",
                 {
                     "duration_ms": round(duration_ms, 2),
@@ -441,8 +494,10 @@ class RAGPipeline:
         except Exception as err:
             logger.error("QA pipeline failed for query '%s': %s", clean_query, err)
             self._emit_event(
-                events, event_callback,
-                EventStage.PIPELINE_FAILED, EventStatus.FAILED,
+                events,
+                event_callback,
+                EventStage.PIPELINE_FAILED,
+                EventStatus.FAILED,
                 f"QA failed: {err}",
                 {"error": str(err), "query": clean_query},
             )

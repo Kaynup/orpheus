@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 
 @dataclass
 class EvaluationTestCase:
     """Represents a benchmark test case for RAG verification."""
+
     test_id: str
     question: str
     category: str  # 'factual_single_doc', 'factual_multi_doc', 'out_of_scope_refusal', 'technical_param'
@@ -34,7 +35,10 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
     ),
     EvaluationTestCase(
         test_id="EVAL-02",
-        question="Provide a strict bulleted list stating the home office equipment stipend for remote employees and the exact days required in-office.",
+        question=(
+            "Provide a strict bulleted list stating the home office equipment "
+            "stipend for remote employees and the exact days required in-office."
+        ),
         category="factual_single_doc",
         expected_keywords=["750", "Tuesdays", "Thursdays"],
         expected_source_files=["acme_hr_policy.txt"],
@@ -44,7 +48,10 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
     ),
     EvaluationTestCase(
         test_id="EVAL-03",
-        question="What is the monthly downtime limit for the 99.99% cloud SLA guarantee? Output only the numerical value and unit.",
+        question=(
+            "What is the monthly downtime limit for the 99.99% cloud SLA guarantee? "
+            "Output only the numerical value and unit."
+        ),
         category="factual_single_doc",
         expected_keywords=["4.38", "minute"],
         expected_source_files=["cloud_architecture_handbook.txt"],
@@ -114,7 +121,10 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
     ),
     EvaluationTestCase(
         test_id="EVAL-10",
-        question="Synthesize the circuit breaker trigger condition in cloud architecture and the parental leave duration in HR policy into a single response.",
+        question=(
+            "Synthesize the circuit breaker trigger condition in cloud architecture "
+            "and the parental leave duration in HR policy into a single response."
+        ),
         category="factual_multi_doc",
         expected_keywords=["50%", "16", "week"],
         expected_source_files=["cloud_architecture_handbook.txt", "acme_hr_policy.txt"],

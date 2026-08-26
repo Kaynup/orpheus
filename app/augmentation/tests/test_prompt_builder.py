@@ -1,6 +1,5 @@
 """Unit tests for PromptBuilder, dynamic asset loading, and citation mapping."""
 
-from pathlib import Path
 import pytest
 
 from app.augmentation.prompt_builder import (
