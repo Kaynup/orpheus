@@ -6,6 +6,41 @@ import { streamQuery } from "../modules/api.js";
 import { resetQAStepper, updateQAStep, updateDiagnosticMetrics } from "./inspector.js";
 import { showModal } from "./modal.js";
 
+export function renderChatDocsRibbon(documents) {
+    const listContainer = document.getElementById("chat-docs-list");
+    if (!listContainer) return;
+    listContainer.replaceChildren();
+
+    if (!documents || documents.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "chat-docs-empty";
+        empty.textContent = "None indexed yet (click to upload)";
+        empty.addEventListener("click", () => {
+            document.getElementById("tab-btn-ingest")?.click();
+        });
+        listContainer.appendChild(empty);
+        return;
+    }
+
+    documents.forEach(doc => {
+        const badge = document.createElement("div");
+        badge.className = "chat-doc-badge";
+        badge.title = `${doc.filename} (${doc.chunk_count || 0} chunks) — Click to view in Documents tab`;
+
+        const extSpan = document.createElement("span");
+        extSpan.className = "chat-doc-ext";
+        const parts = doc.filename ? doc.filename.split(".") : [];
+        const ext = parts.length > 1 ? parts.pop() : (doc.file_type || "TXT");
+        extSpan.textContent = (ext || "TXT").toUpperCase().slice(0, 4);
+
+        badge.appendChild(extSpan);
+        badge.addEventListener("click", () => {
+            document.getElementById("tab-btn-ingest")?.click();
+        });
+        listContainer.appendChild(badge);
+    });
+}
+
 export function initChat() {
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
@@ -13,20 +48,15 @@ export function initChat() {
     const chatMessagesArea = document.getElementById("chat-messages");
     const chatTopK = document.getElementById("chat-top-k");
     const chatModelSelect = document.getElementById("chat-model-select");
-    const suggestionChips = document.querySelectorAll(".chip");
+    const docsLabel = document.getElementById("chat-docs-label");
 
     if (!chatForm || !chatInput || !chatMessagesArea) return;
 
-    // Handle suggestion chips
-    suggestionChips.forEach(chip => {
-        chip.addEventListener("click", () => {
-            const query = chip.getAttribute("data-query");
-            if (query) {
-                chatInput.value = query;
-                chatForm.dispatchEvent(new Event("submit"));
-            }
+    if (docsLabel) {
+        docsLabel.addEventListener("click", () => {
+            document.getElementById("tab-btn-ingest")?.click();
         });
-    });
+    }
 
     chatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -43,10 +73,10 @@ export function initChat() {
 
         const userHeader = document.createElement("div");
         userHeader.className = "message-header";
-        const userSender = document.createElement("span");
-        userSender.className = "message-sender";
-        userSender.textContent = "You";
-        userHeader.appendChild(userSender);
+        const userTime = document.createElement("span");
+        userTime.className = "message-time";
+        userTime.textContent = "Just now";
+        userHeader.appendChild(userTime);
 
         const userBody = document.createElement("div");
         userBody.className = "message-body";
@@ -63,13 +93,9 @@ export function initChat() {
 
         const botHeader = document.createElement("div");
         botHeader.className = "message-header";
-        const botSender = document.createElement("span");
-        botSender.className = "message-sender";
-        botSender.textContent = "Orpheus";
         const botTime = document.createElement("span");
         botTime.className = "message-time";
         botTime.textContent = "Processing...";
-        botHeader.appendChild(botSender);
         botHeader.appendChild(botTime);
 
         const botBody = document.createElement("div");

@@ -4,6 +4,7 @@
 
 import { fetchDocuments, deleteDocument, loadSamples, resetDatabase, streamIngest, fetchStatus } from "../modules/api.js";
 import { resetIngestStepper, updateIngestStep } from "./inspector.js";
+import { renderChatDocsRibbon } from "./chat.js";
 
 let activeFile = null;
 
@@ -185,10 +186,12 @@ export async function loadDocumentsList() {
             empty.textContent = "No documents indexed yet. Ingest a document or click 'Load Samples' above.";
             documentsListContainer.appendChild(empty);
             if (tabDocCount) tabDocCount.textContent = "0";
+            renderChatDocsRibbon([]);
             return;
         }
 
         if (tabDocCount) tabDocCount.textContent = data.documents.length;
+        renderChatDocsRibbon(data.documents);
 
         data.documents.forEach(doc => {
             const card = document.createElement("div");

@@ -25,46 +25,103 @@
     box-shadow: var(--shadow-soft);
 }
 
-/* Suggestions Chips */
-.suggestions-container {
+/* Documents Header Ribbon */
+.chat-docs-ribbon {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border-color-light);
     margin-bottom: 12px;
     flex-wrap: wrap;
+    min-height: 48px;
 }
 
-.suggestions-label {
-    font-size: 11px;
-    font-weight: 600;
+.chat-docs-label {
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 700;
     color: var(--text-muted);
-    text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease;
 }
 
-.suggestion-chips {
+.chat-docs-label:hover {
+    color: var(--color-primary);
+}
+
+.chat-docs-list {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
-.chip {
-    background: var(--bg-surface-soft);
+/* Folded-Corner Document Badge Icon */
+.chat-doc-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 34px;
+    background: var(--bg-surface-elevated);
     border: 1px solid var(--border-color);
-    font-size: 12px;
-    color: var(--text-main);
-    padding: 4px 10px;
-    border-radius: 14px;
+    border-radius: 3px 8px 3px 3px;
+    position: relative;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 2px rgba(35, 45, 40, 0.05);
+    flex-shrink: 0;
 }
 
-.chip:hover {
-    background: var(--color-primary-soft);
-    border-color: var(--color-accent-sage);
+/* Folded corner flap */
+.chat-doc-badge::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 7px;
+    height: 7px;
+    background: var(--border-color);
+    border-bottom-left-radius: 3px;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+    transition: background-color 0.15s ease;
+}
+
+.chat-doc-badge .chat-doc-ext {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 700;
     color: var(--color-primary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.chat-doc-badge:hover {
+    background: rgba(37, 70, 54, 0.07);
+    border-color: var(--color-accent-sage);
+    box-shadow: 0 2px 6px rgba(35, 45, 40, 0.08);
+}
+
+.chat-doc-badge:hover::after {
+    background: var(--color-accent-sage);
+}
+
+.chat-docs-empty {
+    font-size: 12px;
+    color: var(--text-light);
+    font-style: italic;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.chat-docs-empty:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
 }
 
 /* Chat Messages */
@@ -195,6 +252,19 @@
 .input-wrapper input:focus {
     border-color: var(--color-accent-sage);
     background: #FFFFFF;
+}
+
+#chat-submit-btn {
+    padding: 0 22px;
+    background-color: var(--color-primary);
+    color: #FFFFFF;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+#chat-submit-btn:hover:not(:disabled) {
+    background-color: var(--color-accent-sage);
+    color: #E2ECE5;
+    border-color: var(--color-accent-sage);
 }
 
 .chat-controls-row {

@@ -3,22 +3,11 @@
     <div class="chat-layout">
         <!-- Left: Chat conversation stream -->
         <div class="chat-main-panel">
-            <!-- Quick Question Suggestion Chips -->
-            <div class="suggestions-container">
-                <span class="suggestions-label">Try asking:</span>
-                <div class="suggestion-chips">
-                    <button class="chip"
-                        data-query="What are the core collaboration hours at Acme Corporation?">Core
-                        Hours</button>
-                    <button class="chip"
-                        data-query="How much is the remote office equipment stipend and what days are in-office?">Remote
-                        Stipend</button>
-                    <button class="chip"
-                        data-query="What is the monthly downtime limit for the 99.99% cloud SLA?">Cloud SLA
-                        Limit</button>
-                    <button class="chip"
-                        data-query="What is Acme's policy regarding interstellar space travel reimbursement?">Space
-                        Policy (Guardrail Test)</button>
+            <!-- Header Documents Ribbon -->
+            <div class="chat-docs-ribbon" id="chat-docs-ribbon">
+                <span class="chat-docs-label" id="chat-docs-label" title="View all documents in Documents tab">Documents:</span>
+                <div class="chat-docs-list" id="chat-docs-list">
+                    <span class="chat-docs-empty">None indexed yet</span>
                 </div>
             </div>
 
@@ -26,7 +15,6 @@
             <div id="chat-messages" class="chat-messages-area">
                 <div class="chat-message bot-message intro-message">
                     <div class="message-header">
-                        <span class="message-sender">Orpheus</span>
                         <span class="message-time">Ready</span>
                     </div>
                     <div class="message-body">
@@ -45,7 +33,6 @@
                         required>
                     <button type="submit" id="chat-submit-btn" class="btn btn-primary">
                         <span>Ask</span>
-                        <span class="btn-arrow">→</span>
                     </button>
                 </div>
                 <div class="chat-controls-row">
@@ -76,8 +63,7 @@
         <!-- Right: Live Pipeline Observability Inspector -->
         <div class="chat-inspector-panel">
             <div class="inspector-header">
-                <h3>Live Pipeline Inspector</h3>
-                <span class="live-tag">Truthful Backend Sync</span>
+                <h3 class="inspector-title">Pipeline</h3>
             </div>
             <p class="inspector-desc">Observe real-time state transitions as your query moves through the
                 RAG pipeline.</p>
