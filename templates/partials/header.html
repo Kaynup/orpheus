@@ -9,8 +9,10 @@
             </svg>
         </div>
         <div>
-            <h1 class="brand-title">Orpheus <span class="version-badge" id="app-version-badge">v{{ version }}</span></h1>
-            <p class="brand-subtitle">Transparent GenAI Pipeline • Persistent ChromaDB • LiteLLM Orchestration
+            <h1 class="brand-title">Orpheus <span class="version-badge" id="app-version-badge">v{{ version }}</span>
+            </h1>
+            <p class="brand-subtitle">Chat with context of sources • Enter your documents with a click • Evaluate on
+                ready-made or custom benchmark
             </p>
         </div>
     </div>
@@ -18,26 +20,28 @@
     <div class="header-actions">
         <div class="status-indicator">
             <span class="pulse-dot"></span>
-            <span id="db-status-text">ChromaDB Ready (0 chunks)</span>
+            <span id="db-status-text">(0 chunks)</span>
         </div>
-        <button id="btn-load-samples" class="btn btn-secondary btn-sm" title="Ingest built-in sample documents">
-            Load Samples
-        </button>
-        <button id="btn-reset-db" class="btn btn-outline-danger btn-sm" title="Clear vector database">
-            Reset DB
-        </button>
+        <div class="header-btn-card">
+            <button id="btn-load-samples" class="btn-header-action" title="Ingest built-in sample documents">
+                Load Samples
+            </button>
+            <button id="btn-reset-db" class="btn-header-action btn-danger-action" title="Clear vector database">
+                Reset DB
+            </button>
+        </div>
     </div>
 </header>
 
 <!-- Navigation Tabs -->
 <nav class="nav-tabs">
     <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat">
-        RAG Chat & Inspector
+        Inference
     </button>
     <button class="nav-tab" data-tab="tab-ingest" id="tab-btn-ingest">
-        Document Ingestion (<span id="tab-doc-count">0</span>)
+        Documents (<span id="tab-doc-count">0</span>)
     </button>
     <button class="nav-tab" data-tab="tab-eval" id="tab-btn-eval">
-        Evaluation Benchmark
+        Evaluation
     </button>
 </nav>

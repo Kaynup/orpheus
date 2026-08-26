@@ -92,18 +92,62 @@
     background-color: var(--color-accent-sage);
 }
 
+.header-btn-card {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-surface);
+    padding: 3px 4px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.btn-header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 16px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1.4;
+    transition: all 0.15s ease;
+}
+
+.btn-header-action:hover {
+    color: var(--color-primary);
+    background: var(--bg-surface-soft);
+    border-color: var(--border-color-light);
+}
+
+.btn-header-action.btn-danger-action {
+    color: var(--color-accent-terracotta);
+}
+
+.btn-header-action.btn-danger-action:hover {
+    background: var(--status-error-bg);
+    border-color: rgba(168, 72, 59, 0.2);
+}
+
 /* Navigation Tabs */
 .nav-tabs {
     display: flex;
     gap: 8px;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 4px;
+    padding-bottom: 0;
+    position: relative;
 }
 
 .nav-tab {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
     font-family: var(--font-heading);
     font-size: 14px;
     font-weight: 600;
@@ -111,7 +155,8 @@
     padding: 10px 18px;
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     cursor: pointer;
-    transition: all 0.15s ease;
+    margin-bottom: -1px;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .nav-tab:hover {
@@ -122,18 +167,20 @@
 .nav-tab.active {
     color: var(--color-primary);
     background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    border-color: var(--border-color);
     border-bottom: 2px solid var(--bg-surface);
-    margin-bottom: -5px;
+    margin-bottom: -1px;
 }
 
 /* Tab Panels */
 .tab-pane {
     display: none;
+    width: 100%;
 }
 
 .tab-pane.active {
     display: block;
+    width: 100%;
 }
 
 /* Buttons */
