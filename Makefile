@@ -26,5 +26,14 @@ eval:
 test:
 	$(PYTHON) -m pytest -v
 
-clean:
+clean-cache:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__ .pytest_cache/
+	echo "\ncleared cache\n"
+
+clean-uploads-dev:
+	rm -f data/uploads/*
+	echo "\nremoved uploads in dev environment\n"
+
+clean-volumes-dev:
+	rm -rf data/chroma_db/*-*-*-*-*
+	echo -e "\ncleared chroma_db volumnes\n"

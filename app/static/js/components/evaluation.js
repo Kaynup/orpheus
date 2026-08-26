@@ -87,7 +87,11 @@ export function initEvaluation() {
             }
         } catch (err) {
             console.error(`Evaluation failed: ${err}`);
-            evalOutput.innerHTML = `<div class="eval-error">Evaluation failed: ${err.message}</div>`;
+            evalOutput.textContent = "";
+            const errDiv = document.createElement("div");
+            errDiv.className = "eval-error";
+            errDiv.textContent = `Evaluation failed: ${err.message}`;
+            evalOutput.appendChild(errDiv);
         } finally {
             btnRunEval.disabled = false;
             btnRunEval.textContent = "Run Full Benchmark";
