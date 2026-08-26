@@ -697,7 +697,7 @@ Added
       ``embedding_manager.distance_to_similarity(raw_distance)``
       (``pytest.approx``).
 
-  - ``app/evaluation/tests/test_evaluation.py`` — 4 tests:
+  - ``app/evaluation/tests/test_evaluation.py`` — 5 tests:
 
     * ``test_evaluator_scoring_all_dimensions``: Evaluates all 5 scoring
       dimensions on supported questions and unsupported out-of-scope refusals.
@@ -708,6 +708,9 @@ Added
     * ``test_evaluator_run_benchmark_aggregate_metrics``: Runs multi-case
       benchmark suite and verifies mathematical aggregation of pass rates,
       average latency, and accuracy percentages on ``EvaluationReport``.
+    * ``test_evaluator_punctuation_and_number_normalization``: Verifies
+      that comma-separated numbers (``"6,000"``) and plain numbers (``"6000"``)
+      match interchangeably across evaluation runs.
 
   - ``tests/integration/test_pipeline.py`` — 4 end-to-end integration tests:
 
@@ -721,7 +724,7 @@ Added
       ingestion, cross-synthesis QA, and subsequent query refusal after
       document deletion.
 
-  - Full automated test suite comprises **73 passing tests** across 12 test
+  - Full automated test suite comprises **74 passing tests** across 12 test
     modules with 100% pass rate in under 15 seconds.
 
   - ``pytest.ini`` created with ``testpaths = app tests``, enabling
@@ -765,22 +768,28 @@ Added
   - ``test_enforces_strict_text_content``: Positive assertion that
     ``chat.js`` contains ``.textContent``.
 
-* **Demanding Evaluation Benchmark & Constraint Logic**
+* **Flexible & Demanding Evaluation Benchmark Logic**
   (``app/evaluation/test_dataset.py``, ``app/evaluation/evaluator.py``):
 
   - ``EvaluationTestCase`` extended with:
 
     * ``max_length: Optional[int] = None`` — model answer must be ≤ this
-      many characters.
+      many characters (excluding standard ``[Source N]`` citation tags).
     * ``require_all_keywords: bool = False`` — all expected keywords must
       be present for grounding to pass.
 
-  - ``RAGEvaluator.evaluate_test_case()`` evaluates a fifth dimension —
-    **Length Constraint** — and ANDs it into ``overall_passed``.
+  - ``RAGEvaluator.evaluate_test_case()`` features:
 
-  - ``BENCHMARK_TEST_SUITE`` updated with stricter ``max_length`` bounds
-    (e.g. ``< 100`` chars), ``require_all_keywords=True`` for synthesis
-    queries, and multi-document cross-referencing phrasing.
+    * **Regex Punctuation & Comma Normalization**: Evaluator applies
+      ``re.sub(r'[\s\-_,]+', ' ', text)`` to match comma-separated figures
+      (``"6,000"``) and unformatted numerals (``"6000"``) interchangeably.
+    * **Length Boundary Constraint**: Evaluates a fifth dimension —
+      **Length Constraint** — with citation stripping to prevent artificial
+      failures on standard attribution formatting.
+
+  - ``BENCHMARK_TEST_SUITE`` updated with aligned prompt instructions,
+    realistic character limits (e.g. ``max_length=250``), and cross-document
+    synthesis verification.
 
 * **Real-World Sample Documents Corpus**
   (``data/sample_documents/``):

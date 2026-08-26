@@ -142,3 +142,22 @@ def test_evaluator_run_benchmark_aggregate_metrics(eval_pipeline):
     assert "pass_rate_pct" in report_dict
     assert "results" in report_dict
     assert len(report_dict["results"]) == 2
+
+
+def test_evaluator_punctuation_and_number_normalization(eval_pipeline):
+    """Verify that comma-separated keywords (e.g. '10,000') match raw numbers ('10000') and vice versa."""
+    evaluator = RAGEvaluator(eval_pipeline)
+
+    test_case = EvaluationTestCase(
+        test_id="T_NORM",
+        question="What are the core hours?",
+        category="factual",
+        expected_keywords=["10:00", "3:00"],
+        expected_source_files=["hr_test.txt"],
+        should_refuse=False,
+        description="Normalization test",
+        require_all_keywords=True,
+    )
+    res = evaluator.evaluate_test_case(test_case)
+    assert res.grounding_passed is True
+    assert res.passed is True

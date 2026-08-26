@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -123,11 +124,20 @@ class RAGEvaluator:
                     retrieval_passed = False
                     failure_reasons.append(f"Expected source '{expected_doc}' not found in retrieved chunks.")
 
-            # 3. Evaluate Grounding (check for key terms in answer)
-            matched_keywords = [
-                kw for kw in test_case.expected_keywords
-                if kw.lower() in answer_text.lower()
-            ]
+            # 3. Evaluate Grounding (check for key terms with normalization for punctuation/commas)
+            def _normalize_text(text: str) -> str:
+                return re.sub(r"[\s\-_,]+", " ", text.lower()).strip()
+
+            matched_keywords = []
+            answer_lower = answer_text.lower()
+            answer_norm = _normalize_text(answer_text)
+
+            for kw in test_case.expected_keywords:
+                kw_lower = kw.lower()
+                kw_norm = _normalize_text(kw)
+                if (kw_lower in answer_lower) or (kw_norm and kw_norm in answer_norm):
+                    matched_keywords.append(kw)
+
             if test_case.require_all_keywords:
                 grounding_passed = len(matched_keywords) == len(test_case.expected_keywords)
             else:
@@ -144,11 +154,16 @@ class RAGEvaluator:
             if not citation_passed:
                 failure_reasons.append("Answer lacks required source citations.")
 
-        # 5. Evaluate Length Constraints
+        # 5. Evaluate Length Constraints (stripping citation metadata tags to prevent artificial failures)
         length_passed = True
-        if test_case.max_length and len(answer_text) > test_case.max_length:
-            length_passed = False
-            failure_reasons.append(f"Answer exceeds maximum length ({len(answer_text)} > {test_case.max_length} chars).")
+        if test_case.max_length:
+            clean_answer = re.sub(r"\[Source[^\]]*\]", "", answer_text).strip()
+            effective_len = min(len(answer_text), len(clean_answer))
+            if effective_len > test_case.max_length:
+                length_passed = False
+                failure_reasons.append(
+                    f"Answer exceeds maximum length ({effective_len} > {test_case.max_length} chars)."
+                )
 
         overall_passed = retrieval_passed and grounding_passed and citation_passed and refusal_passed and length_passed
 

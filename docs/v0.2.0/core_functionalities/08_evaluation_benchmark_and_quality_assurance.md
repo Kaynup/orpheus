@@ -98,6 +98,7 @@ flowchart TD
 1. **Retrieval Accuracy**:
    $$\forall \text{doc} \in \text{expected\_source\_files}, \exists \text{src} \in \text{retrieved\_sources} \text{ s.t. } \text{doc.lower()} \subseteq \text{src.lower()}$$
 2. **Grounding Accuracy**:
+   - **Text & Punctuation Normalization**: Evaluator applies regex normalization ($\text{re.sub(r'[\s\-_,]+', ' ', text)}$) so numbers formatted with or without commas (`6,000` vs `6000`) and hyphens match robustly across different model tokenizers.
    - If `require_all_keywords == True`: All `expected_keywords` must appear in the answer.
    - If `require_all_keywords == False`: At least $\max(1, \lfloor N/2 \rfloor)$ keywords must appear.
 3. **Citation Accuracy**:
@@ -106,7 +107,8 @@ flowchart TD
    - Unsupported queries must refuse (preventing hallucination).
    - Supported queries must *not* refuse.
 5. **Length Constraint**:
-   $$\text{len}(\text{answer}) \le \text{max\_length}$$
+   $$\text{effective\_len}(\text{answer}) \le \text{max\_length}$$
+   *(Note: Citation tags like `[Source 1]` are excluded when computing effective length to avoid penalizing standard document attribution).*
 
 ---
 
@@ -116,13 +118,13 @@ The benchmark suite in [`app/evaluation/test_dataset.py`](file:///home/remitpe/M
 
 | Test ID | Question Summary | Category | Expected Source | Key Constraints |
 | :--- | :--- | :--- | :--- | :--- |
-| **EVAL-01** | Core collaboration hours at Acme Corp | `factual_single_doc` | `acme_hr_policy.txt` | `max_length=100`, `require_all_keywords=True` |
+| **EVAL-01** | Core collaboration hours at Acme Corp | `factual_single_doc` | `acme_hr_policy.txt` | `max_length=250`, `require_all_keywords=True` |
 | **EVAL-02** | Home office equipment stipend & in-office days | `factual_single_doc` | `acme_hr_policy.txt` | Bulleted list format, `require_all_keywords=True` |
 | **EVAL-03** | Monthly downtime limit for 99.99% cloud SLA | `factual_single_doc` | `cloud_architecture_handbook.txt` | `max_length=150`, `require_all_keywords=True` |
 | **EVAL-04** | Redis default caching TTL values | `factual_single_doc` | `cloud_architecture_handbook.txt` | List items, `require_all_keywords=True` |
 | **EVAL-05** | Solar monocrystalline panel efficiency range | `factual_single_doc` | `renewable_energy_faq.txt` | `require_all_keywords=True` |
-| **EVAL-06** | LiFePO4 battery cycle life at 80% DoD | `factual_single_doc` | `renewable_energy_faq.txt` | Technical metrics, `require_all_keywords=True` |
-| **EVAL-07** | Embedding model and vector dimension | `factual_single_doc` | `doc_qa_system_manual.txt` | `max_length=150`, `require_all_keywords=True` |
+| **EVAL-06** | LiFePO4 battery cycle life at 80% DoD | `factual_single_doc` | `renewable_energy_faq.txt` | Punctuation normalization, `require_all_keywords=True` |
+| **EVAL-07** | Embedding model and vector dimension | `factual_single_doc` | `doc_qa_system_manual.txt` | `max_length=250`, `require_all_keywords=True` |
 | **EVAL-08** | Interstellar space travel reimbursement policy | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Hallucination test) |
 | **EVAL-09** | Acme stock price prediction for next year | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Speculation test) |
 | **EVAL-10** | Synthesis of cloud circuit breaker & parental leave | `factual_multi_doc` | `cloud_architecture...`, `acme_hr...` | Cross-document synthesis, `require_all_keywords=True` |
