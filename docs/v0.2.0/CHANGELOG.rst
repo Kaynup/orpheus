@@ -858,3 +858,140 @@ Fixed
   Resolved missing closing brackets in Rich console markup style tags
   across ingestion banners, headers, and question inspectors.
 
+
+----
+
+=============================
+v0.2.1 Release Changelog
+=============================
+
+This changelog provides a comprehensive, detailed architectural record of all
+features, UI/UX polish, frontend layout enhancements, security hardening, developer tooling,
+and code quality integrations introduced across the v0.2.1 release cycle
+(``v0.2.0-alpha`` → ``HEAD``).
+
+
+Frontend Architecture & UI/UX Subsystem
+========================================
+
+Added
+-----
+
+* **3-Card Interactive Chat Workspace & Split Action Bar**
+  (``templates/partials/tab_chat.html``, ``app/static/js/components/chat.js``, ``app/static/css/components/chat.css``):
+
+  - Introduced dynamic Model Orchestration dropdown selector (``#model-dropdown-trigger``, ``#model-dropdown-menu``).
+    Models are resolved dynamically via ``/api/models`` or fallback to configured defaults, parsing provider prefixes
+    (``gemini/*``, ``openrouter/*``, ``ollama/*``, ``openai/*``, ``offline``) with descriptive provider labels
+    ("Google Cloud", "OpenRouter", "Ollama", "OpenAI", "Local Extractor") and visual badge tags.
+
+  - Implemented dual-action split "Ask" button: a 70% primary submission button paired with a 30% dynamic ``top_k``
+    dropdown selector (allowing interactive retrieval depth tuning between ``k=3``, ``k=5``, and ``k=10``).
+
+  - Added real-time Documents Ribbon (``#chat-docs-list``, ``renderChatDocsRibbon``) above the chat input, displaying
+    compact badge chips for all indexed documents with uppercase format indicators (``TXT``, ``PDF``), chunk counts,
+    and single-click navigation to the Ingestion view.
+
+  - Rebuilt QA Pipeline Stepper (``#qa-stepper``) with aligned stage indicators, clear state transition animations,
+    and diagnostic telemetry metric cards (Total Latency, Confidence, Retrieval Chunks).
+
+* **60/40 Split Documents & Ingestion Layout**
+  (``templates/partials/tab_ingestion.html``, ``app/static/js/components/ingestion.js``, ``app/static/css/components/ingestion.css``):
+
+  - Restructured the Ingestion workspace into a responsive 60/40 split grid:
+    * **Left Panel (60% width)**: Houses the drag-and-drop file upload zone, chunk size/overlap configuration inputs,
+      and the horizontally scrollable Indexed Documents repository (``.documents-scroll-container``, ``#documents-list-container``).
+    * **Right Panel (40% width)**: Houses the live Ingestion Pipeline Stepper (``#ingest-stepper``) displaying real-time
+      SSE indexing stage transitions.
+
+  - Implemented dual-action ingestion button controls: 70% width primary "Start Ingestion Pipeline" button (``#btn-upload-submit``)
+    alongside a 30% width "Ingest Another" button (``#btn-ingest-another``) for fast consecutive document uploads.
+
+* **Navigation & Presentation Polish**
+  (``templates/base.html``, ``templates/partials/header.html``, ``app/static/css/layout.css``, ``app/static/js/components/tabs.js``):
+
+  - Added CSS hover tooltips for all navigation tab buttons (``Chat``, ``Ingestion``, ``Evaluation``, ``API Docs``).
+  - Enforced strict minimum height and overflow layout constraints to eliminate vertical layout shift during tab switching.
+  - Streamlined system status badge in header and integrated static favicon asset routing (``/favicon.ico``).
+
+
+Security Hardening & DOM Sanitization
+=====================================
+
+Fixed
+-----
+
+* **DOM XSS Vulnerability Remediation in Evaluation Benchmark Viewer**
+  (``app/static/js/components/evaluation.js``):
+
+  - Completely eliminated unsafe ``innerHTML`` table row and cell construction when rendering benchmark test case results.
+  - Replaced with secure, programmatic DOM APIs (``document.createElement``, ``textContent``, ``replaceChildren``, ``appendChild``),
+    ensuring zero risk of DOM-based Cross-Site Scripting (XSS) when rendering user questions, responses, or failure reasons.
+
+
+Backend API & LLM Orchestration
+================================
+
+Changed / Refactored
+---------------------
+
+* **Dynamic Model Resolution & Provider Routing**
+  (``app/api/routes.py``, ``app/generation/generator.py``, ``app/static/js/modules/api.js``):
+
+  - Added ``resolve_model_item()`` helper in ``app/api/routes.py`` parsing model identifiers into structured metadata
+    objects containing model ID, display name, provider name, and source badges.
+  - Added ``/api/models`` endpoint exposing available configured LLM models and runtime defaults.
+  - Standardized Google Gemini routing to dispatch through Google AI Studio using the ``gemini/`` LiteLLM provider prefix.
+  - Enhanced offline extractive fallback generator with robust keyword matching and graceful empty-context refusal handling.
+
+
+Code Quality, Tooling & Developer Experience
+============================================
+
+Added
+-----
+
+* **Ruff Linter & Formatter Tooling Integration**
+  (``pyproject.toml``, ``requirements.txt``, ``Makefile``):
+
+  - Added ``ruff`` to ``requirements.txt``.
+  - Configured ``pyproject.toml`` with strict Ruff settings targeting Python 3.10, 120-character line length limit,
+    and enabling Pyflakes (``F``), pycodestyle (``E``, ``W``), and isort (``I``) rule suites with zero rule suppressions.
+  - Added ``make lint`` (``python3 -m ruff check app tests cli.py``) and ``make format`` (``python3 -m ruff format app tests cli.py``)
+    targets to ``Makefile``.
+  - Added developer cleanup targets to ``Makefile``: ``clean-cache`` (pycache removal), ``clean-uploads-dev`` (uploaded files),
+    and ``clean-volumes-dev`` (ChromaDB volume data).
+
+* **Automated Code Quality Test Gate**
+  (``tests/integration/test_code_quality.py``):
+
+  - Introduced ``test_ruff_linting()`` integration test running Ruff programmatically during ``pytest`` execution,
+    failing the test suite if any linting or formatting violations exist.
+
+Refactored
+----------
+
+* **Codebase-Wide Strict Formatting & Lint Compliance**
+  (``app/``, ``tests/``, ``cli.py``):
+
+  - Formatted entire repository and manually wrapped long string literals, print statements, and docstrings across
+    ``cli.py``, ``app/pipeline/rag_pipeline.py``, ``app/evaluation/test_dataset.py``, and test modules to strictly conform
+    to the 120-character line limit (``E501``).
+  - Resolved import ordering (``I001``) and cleaned up unused variable assignments (``F841``) with zero linter ignores.
+
+
+Documentation & Architectural Specifications
+=============================================
+
+Changed
+-------
+
+* **README Modernization & Architectural Workflows**
+  (``README.md``):
+
+  - Added interactive status badges for Version (``v0.2.0-alpha``), Python (``3.10``), Flask (``3.0+``), ChromaDB (``0.4.22+``),
+    and LiteLLM (``Multi-Provider``).
+  - Embedded Mermaid flowchart visualizing the Document Ingestion Pipeline and QA Generation Pipeline workflows.
+  - Restructured tech stack specifications, feature matrix, and CLI usage documentation.
+
+
