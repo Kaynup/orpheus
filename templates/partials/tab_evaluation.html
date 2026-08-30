@@ -1,43 +1,111 @@
 <!-- TAB 3: Evaluation Benchmark -->
 <section id="tab-eval" class="tab-pane">
     <div class="eval-layout">
+
+        <!-- Header -->
         <div class="eval-header-card">
             <div>
                 <h2>RAG Evaluation Benchmark</h2>
-                <p>Automated verification testing retrieval metrics</p>
+                <p>Industry-standard IR metrics against the benchmark suite</p>
             </div>
-            <button id="btn-run-eval" class="btn btn-primary">
-                Run Full Benchmark
-            </button>
+            <button id="btn-run-eval" class="btn btn-primary">Run Full Benchmark</button>
         </div>
 
-        <!-- Aggregate Summary Cards -->
+        <!-- Metric Summary Cards (hidden until run) -->
         <div class="eval-summary-grid" id="eval-summary-grid" style="display: none;">
             <div class="eval-stat-card">
-                <span class="eval-stat-label">Overall Pass Rate</span>
-                <span class="eval-stat-val" id="eval-stat-pass-rate">0%</span>
+                <span class="eval-stat-label">Pass Rate</span>
+                <span class="eval-stat-val" id="eval-stat-pass-rate">—</span>
             </div>
             <div class="eval-stat-card">
-                <span class="eval-stat-label">Retrieval</span>
-                <span class="eval-stat-val" id="eval-stat-retrieval">0%</span>
+                <span class="eval-stat-label">
+                    Context P@K
+                    <button class="info-btn" aria-label="About Context Precision" data-tip="tip-pk">ⓘ</button>
+                </span>
+                <span class="eval-stat-val" id="eval-stat-precision">—</span>
+                <div id="tip-pk" class="eval-tooltip" hidden>
+                    Precision@K — fraction of top-K retrieved chunks that are genuinely relevant. Higher = less noise.
+                </div>
             </div>
             <div class="eval-stat-card">
-                <span class="eval-stat-label">Grounding</span>
-                <span class="eval-stat-val" id="eval-stat-grounding">0%</span>
+                <span class="eval-stat-label">
+                    Context R@K
+                    <button class="info-btn" aria-label="About Context Recall" data-tip="tip-rk">ⓘ</button>
+                </span>
+                <span class="eval-stat-val" id="eval-stat-recall">—</span>
+                <div id="tip-rk" class="eval-tooltip" hidden>
+                    Recall@K — fraction of all ground-truth relevant chunks successfully retrieved in top-K.
+                </div>
             </div>
             <div class="eval-stat-card">
-                <span class="eval-stat-label">Refusal</span>
-                <span class="eval-stat-val" id="eval-stat-refusal">0%</span>
+                <span class="eval-stat-label">
+                    MRR
+                    <button class="info-btn" aria-label="About MRR" data-tip="tip-mrr">ⓘ</button>
+                </span>
+                <span class="eval-stat-val" id="eval-stat-mrr">—</span>
+                <div id="tip-mrr" class="eval-tooltip" hidden>
+                    Mean Reciprocal Rank — 1/rank of first relevant chunk, averaged across queries. Closer to 1.0 = better ranking.
+                </div>
             </div>
             <div class="eval-stat-card">
-                <span class="eval-stat-label">Average</span>
-                <span class="eval-stat-val" id="eval-stat-latency">0 ms</span>
+                <span class="eval-stat-label">
+                    Hit Rate@K
+                    <button class="info-btn" aria-label="About Hit Rate" data-tip="tip-hr">ⓘ</button>
+                </span>
+                <span class="eval-stat-val" id="eval-stat-hit-rate">—</span>
+                <div id="tip-hr" class="eval-tooltip" hidden>
+                    Hit Rate@K — percentage of queries where at least one relevant chunk appears in top-K.
+                </div>
+            </div>
+            <div class="eval-stat-card">
+                <span class="eval-stat-label">Avg Latency</span>
+                <span class="eval-stat-val" id="eval-stat-latency">—</span>
             </div>
         </div>
 
-        <!-- Benchmark Test Cases Table -->
+        <!-- Dual Confusion Matrices (hidden until run) -->
+        <div class="eval-matrices-row" id="eval-matrices-row" style="display: none;">
+
+            <!-- Retrieval Confusion Matrix -->
+            <div class="panel-card eval-matrix-card">
+                <div class="eval-matrix-title">
+                    Retrieval Quality
+                    <button class="info-btn" aria-label="About Retrieval Matrix" data-tip="tip-ret-cm">ⓘ</button>
+                </div>
+                <div id="tip-ret-cm" class="eval-tooltip" hidden>
+                    TP = relevant chunk retrieved · FP = irrelevant chunk retrieved · FN = relevant chunk missed · TN = irrelevant chunk correctly omitted.
+                </div>
+                <div id="eval-retrieval-matrix" class="confusion-matrix-grid">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="cm-stats" id="eval-retrieval-stats"></div>
+            </div>
+
+            <!-- Guardrail Confusion Matrix -->
+            <div class="panel-card eval-matrix-card">
+                <div class="eval-matrix-title">
+                    Guardrail Safety
+                    <button class="info-btn" aria-label="About Guardrail Matrix" data-tip="tip-grd-cm">ⓘ</button>
+                </div>
+                <div id="tip-grd-cm" class="eval-tooltip" hidden>
+                    TP = correctly refused unsupported query · FP = wrongly refused valid query · FN = hallucination breach · TN = correct grounded answer.
+                </div>
+                <div id="eval-guardrail-matrix" class="confusion-matrix-grid">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="cm-stats" id="eval-guardrail-stats"></div>
+            </div>
+
+        </div>
+
+        <!-- Results Table -->
         <div class="panel-card mt-4">
-            <h3>Test Case Diagnostic Results</h3>
+            <div class="eval-table-header">
+                <h3>Test Case Results</h3>
+                <select id="eval-category-filter" class="eval-filter-select" style="display: none;">
+                    <option value="all">All categories</option>
+                </select>
+            </div>
             <div class="table-responsive">
                 <table class="data-table" id="eval-results-table">
                     <thead>
@@ -45,21 +113,23 @@
                             <th>ID</th>
                             <th>Category</th>
                             <th>Question</th>
-                            <th>Retrieval</th>
-                            <th>Grounding</th>
-                            <th>Refusal</th>
+                            <th>P@K</th>
+                            <th>R@K</th>
+                            <th>MRR</th>
                             <th>Status</th>
-                            <th>Latency</th>
+                            <th>ms</th>
                         </tr>
                     </thead>
                     <tbody id="eval-table-body">
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Click 'Run Full Benchmark' to
-                                execute the eval cases for `default` model.</td>
+                            <td colspan="8" class="text-center text-muted">
+                                Click 'Run Full Benchmark' to execute the evaluation suite.
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
     </div>
 </section>

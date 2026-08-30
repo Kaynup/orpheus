@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 
@@ -19,6 +19,11 @@ class EvaluationTestCase:
     description: str
     max_length: Optional[int] = None
     require_all_keywords: bool = False
+    # IR metric ground truth
+    expected_snippets: List[str] = field(default_factory=list)
+    """Factual text substrings that a retrieved chunk must contain to be considered relevant."""
+    total_relevant_chunks: int = 1
+    """Denominator for Recall@K — number of ground-truth relevant chunks that exist in the corpus."""
 
 
 BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
@@ -32,6 +37,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         description="Verify retrieval and extraction of specific work schedule hours with realistic character limits.",
         max_length=250,
         require_all_keywords=True,
+        expected_snippets=["10:00 AM", "3:00 PM", "core collaboration hours"],
+        total_relevant_chunks=2,
     ),
     EvaluationTestCase(
         test_id="EVAL-02",
@@ -45,6 +52,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         should_refuse=False,
         description="Verify multi-attribute extraction and constraint formatting.",
         require_all_keywords=True,
+        expected_snippets=["$750", "Tuesdays", "Thursdays", "home office"],
+        total_relevant_chunks=2,
     ),
     EvaluationTestCase(
         test_id="EVAL-03",
@@ -59,6 +68,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         description="Verify extraction of numerical reliability SLA bounds.",
         max_length=150,
         require_all_keywords=True,
+        expected_snippets=["4.38 minutes", "99.99%", "monthly downtime"],
+        total_relevant_chunks=1,
     ),
     EvaluationTestCase(
         test_id="EVAL-04",
@@ -69,6 +80,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         should_refuse=False,
         description="Verify technical parameter retrieval across list items.",
         require_all_keywords=True,
+        expected_snippets=["15 minutes", "24 hours", "Redis", "session", "static"],
+        total_relevant_chunks=2,
     ),
     EvaluationTestCase(
         test_id="EVAL-05",
@@ -79,6 +92,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         should_refuse=False,
         description="Verify percentage range retrieval from scientific/energy FAQ.",
         require_all_keywords=True,
+        expected_snippets=["20%", "22.8%", "monocrystalline", "STC"],
+        total_relevant_chunks=1,
     ),
     EvaluationTestCase(
         test_id="EVAL-06",
@@ -89,6 +104,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         should_refuse=False,
         description="Verify multi-metric extraction from battery specs with flexible punctuation normalization.",
         require_all_keywords=True,
+        expected_snippets=["6,000", "8,000", "LiFePO4", "Depth of Discharge"],
+        total_relevant_chunks=2,
     ),
     EvaluationTestCase(
         test_id="EVAL-07",
@@ -100,6 +117,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         description="Verify system architecture specification retrieval with brevity constraint.",
         max_length=250,
         require_all_keywords=True,
+        expected_snippets=["MiniLM", "384", "embedding"],
+        total_relevant_chunks=1,
     ),
     EvaluationTestCase(
         test_id="EVAL-08",
@@ -109,6 +128,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         expected_source_files=[],
         should_refuse=True,
         description="Verify hallucination guardrail triggers refusal on completely unsupported topic.",
+        expected_snippets=[],
+        total_relevant_chunks=0,
     ),
     EvaluationTestCase(
         test_id="EVAL-09",
@@ -118,6 +139,8 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         expected_source_files=[],
         should_refuse=True,
         description="Verify refusal on financial speculation not in context.",
+        expected_snippets=[],
+        total_relevant_chunks=0,
     ),
     EvaluationTestCase(
         test_id="EVAL-10",
@@ -131,5 +154,7 @@ BENCHMARK_TEST_SUITE: List[EvaluationTestCase] = [
         should_refuse=False,
         description="Verify multi-document context retrieval across disparate subjects.",
         require_all_keywords=True,
+        expected_snippets=["circuit breaker", "50%", "16 weeks", "parental leave"],
+        total_relevant_chunks=3,
     ),
 ]

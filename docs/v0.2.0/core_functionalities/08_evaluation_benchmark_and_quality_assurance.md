@@ -112,26 +112,60 @@ flowchart TD
 
 ---
 
-## 3. Standardized 10-Question Benchmark Test Suite
+---
 
-The benchmark suite in [`app/evaluation/test_dataset.py`](file:///home/remitpe/MAIN/rag-chat/app/evaluation/test_dataset.py) evaluates diverse query types:
+## 3. Industry-Standard IR Metrics & Dual Confusion Matrices (v0.2.3+)
 
-| Test ID | Question Summary | Category | Expected Source | Key Constraints |
-| :--- | :--- | :--- | :--- | :--- |
-| **EVAL-01** | Core collaboration hours at Acme Corp | `factual_single_doc` | `acme_hr_policy.txt` | `max_length=250`, `require_all_keywords=True` |
-| **EVAL-02** | Home office equipment stipend & in-office days | `factual_single_doc` | `acme_hr_policy.txt` | Bulleted list format, `require_all_keywords=True` |
-| **EVAL-03** | Monthly downtime limit for 99.99% cloud SLA | `factual_single_doc` | `cloud_architecture_handbook.txt` | `max_length=150`, `require_all_keywords=True` |
-| **EVAL-04** | Redis default caching TTL values | `factual_single_doc` | `cloud_architecture_handbook.txt` | List items, `require_all_keywords=True` |
-| **EVAL-05** | Solar monocrystalline panel efficiency range | `factual_single_doc` | `renewable_energy_faq.txt` | `require_all_keywords=True` |
-| **EVAL-06** | LiFePO4 battery cycle life at 80% DoD | `factual_single_doc` | `renewable_energy_faq.txt` | Punctuation normalization, `require_all_keywords=True` |
-| **EVAL-07** | Embedding model and vector dimension | `factual_single_doc` | `doc_qa_system_manual.txt` | `max_length=250`, `require_all_keywords=True` |
-| **EVAL-08** | Interstellar space travel reimbursement policy | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Hallucination test) |
-| **EVAL-09** | Acme stock price prediction for next year | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Speculation test) |
-| **EVAL-10** | Synthesis of cloud circuit breaker & parental leave | `factual_multi_doc` | `cloud_architecture...`, `acme_hr...` | Cross-document synthesis, `require_all_keywords=True` |
+In v0.2.3, the evaluation subsystem was upgraded from simple boolean flags to standardized Information Retrieval (IR) metrics and dual confusion matrix diagnostic modeling:
+
+### 3.1 Retrieval IR Metrics (Chunk-Level)
+For each in-scope query, retrieved chunks in top-$K$ are evaluated against ground-truth source files and factual snippets:
+* **Context Precision@K**: Fraction of top-$K$ retrieved chunks that contain relevant factual evidence.
+  $$\text{Precision@K} = \frac{\text{Relevant Chunks in Top-}K}{K}$$
+* **Context Recall@K**: Fraction of all relevant ground-truth chunks successfully retrieved.
+  $$\text{Recall@K} = \frac{\text{Relevant Chunks in Top-}K}{\text{Total Relevant Chunks}}$$
+* **Context F1@K**: Harmonic mean of Precision@K and Recall@K.
+* **Mean Reciprocal Rank (MRR)**: Evaluates ranking quality by computing the reciprocal rank of the first relevant chunk.
+  $$\text{RR} = \frac{1}{\text{rank}_1}, \quad \text{MRR} = \frac{1}{|Q|} \sum_{q \in Q} \text{RR}_q$$
+* **Hit Rate@K**: Binary indicator ($1$ if at least one relevant chunk was retrieved in top-$K$, else $0$).
+* **Noise Ratio**: Fraction of retrieved chunks that are irrelevant ($\frac{K - \text{Relevant}}{K}$).
+
+### 3.2 Dual 2×2 Confusion Matrices
+
+1. **Retrieval Confusion Matrix** (chunk-level retrieval quality):
+   * **TP**: Relevant chunk correctly retrieved in top-$K$.
+   * **FP**: Irrelevant chunk retrieved (retrieval noise).
+   * **FN**: Relevant chunk omitted from top-$K$.
+   * **TN**: Irrelevant chunk correctly excluded from top-$K$.
+
+2. **Guardrail Safety Matrix** (hallucination & refusal safety):
+   * **TP**: Correct refusal on unsupported out-of-scope query.
+   * **FP**: False rejection (model refused a supported query).
+   * **FN**: Hallucination breach (model attempted ungrounded generation on unsupported query).
+   * **TN**: Correct grounded generation on supported query.
 
 ---
 
-## 4. Enriched Sample Documents Corpus
+## 4. Standardized 10-Question Benchmark Test Suite
+
+The benchmark suite in [`app/evaluation/test_dataset.py`](file:///home/remitpe/MAIN/rag-chat/app/evaluation/test_dataset.py) evaluates diverse query types:
+
+| Test ID | Question Summary | Category | Expected Source | Key Constraints & Expected Snippets |
+| :--- | :--- | :--- | :--- | :--- |
+| **EVAL-01** | Core collaboration hours at Acme Corp | `factual_single_doc` | `acme_hr_policy.txt` | `max_length=250`, `require_all_keywords=True`, snippets: `["10:00 AM", "3:00 PM"]` |
+| **EVAL-02** | Home office equipment stipend & in-office days | `factual_single_doc` | `acme_hr_policy.txt` | Bulleted list format, `require_all_keywords=True`, snippets: `["$750", "Tuesdays"]` |
+| **EVAL-03** | Monthly downtime limit for 99.99% cloud SLA | `factual_single_doc` | `cloud_architecture_handbook.txt` | `max_length=150`, `require_all_keywords=True`, snippets: `["4.38 minutes", "99.99%"]` |
+| **EVAL-04** | Redis default caching TTL values | `factual_single_doc` | `cloud_architecture_handbook.txt` | List items, `require_all_keywords=True`, snippets: `["15 minutes", "24 hours"]` |
+| **EVAL-05** | Solar monocrystalline panel efficiency range | `factual_single_doc` | `renewable_energy_faq.txt` | `require_all_keywords=True`, snippets: `["20%", "22.8%"]` |
+| **EVAL-06** | LiFePO4 battery cycle life at 80% DoD | `factual_single_doc` | `renewable_energy_faq.txt` | Punctuation normalization, `require_all_keywords=True`, snippets: `["6,000", "8,000"]` |
+| **EVAL-07** | Embedding model and vector dimension | `factual_single_doc` | `doc_qa_system_manual.txt` | `max_length=250`, `require_all_keywords=True`, snippets: `["MiniLM", "384"]` |
+| **EVAL-08** | Interstellar space travel reimbursement policy | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Hallucination guardrail test) |
+| **EVAL-09** | Acme stock price prediction for next year | `out_of_scope_refusal` | *(None)* | `should_refuse=True` (Speculation guardrail test) |
+| **EVAL-10** | Synthesis of cloud circuit breaker & parental leave | `factual_multi_doc` | `cloud_architecture...`, `acme_hr...` | Cross-document synthesis, `require_all_keywords=True`, snippets: `["circuit breaker", "16 weeks"]` |
+
+---
+
+## 5. Enriched Sample Documents Corpus
 
 The sample corpus (`data/sample_documents/`) contains dense, realistic long-form content:
 
@@ -142,9 +176,9 @@ The sample corpus (`data/sample_documents/`) contains dense, realistic long-form
 
 ---
 
-## 5. Collocated Quality Assurance & Test Architecture
+## 6. Collocated Quality Assurance & Test Architecture
 
-In v0.2.0, the entire test suite was restructured into a **high-cohesion collocated architecture** (`REFACTOR-TEST-01`):
+In v0.2.0 and expanded in v0.2.3, the entire test suite follows a **high-cohesion collocated architecture**:
 
 ```
 app/
@@ -161,11 +195,12 @@ app/
 ├── augmentation/tests/
 │   └── test_prompt_builder.py       # 6 tests (prompt asset loading, citation mapping)
 ├── generation/tests/
-│   └── test_generator.py            # 7 tests (offline extractive fallback, refusal detection)
+│   ├── test_generator.py            # LLM generator orchestration and error handling tests
+│   └── test_offline_generator.py    # 4 unit tests (extractive offline fallback, refusal caps)
 ├── storage/tests/
 │   └── test_vector_store.py         # 7 tests (HNSW space metadata, paginated batch loop)
 ├── evaluation/tests/
-│   └── test_evaluation.py           # Evaluator scoring verification
+│   └── test_evaluation.py           # 15+ tests (IR metrics, confusion matrices, backward compat)
 └── static/js/tests/
     ├── test_frontend_security.py    # AST scanner enforcing ZERO unsafe DOM sinks (innerHTML)
     └── test_frontend_components.py  # ES6 module import graph and lifecycle hook contracts
@@ -174,11 +209,11 @@ tests/
     └── test_pipeline.py             # End-to-end multi-stage pipeline integration tests
 ```
 
-### 5.1 Automated Test Execution (`pytest.ini`)
+### 6.1 Automated Test Execution (`pytest.ini`)
 `pytest.ini` configures root discovery paths:
 ```ini
 [pytest]
 testpaths = app tests
 python_files = test_*.py
 ```
-Executing `python3 -m pytest -v` runs all **67+ automated unit, security, and integration tests** in under 5 seconds.
+Executing `python3 -m pytest -v` runs all **80+ automated unit, security, and integration tests** cleanly.

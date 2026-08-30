@@ -4,13 +4,10 @@ import pytest
 
 from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
 from app.config import LLMConfig
+from app.generation.assets import ANCHOR_TERMS, DEFAULT_REFUSAL_TEXT, STOPWORDS, _load_json_asset
 from app.generation.generator import (
-    ANCHOR_TERMS,
-    DEFAULT_REFUSAL_TEXT,
-    STOPWORDS,
     GenerationResult,
     LLMGenerator,
-    _load_json_asset,
 )
 
 

@@ -3,7 +3,7 @@
 import pytest
 
 from app.config import AppConfig
-from app.evaluation.evaluator import EvaluationReport, RAGEvaluator, TestCaseResult
+from app.evaluation.evaluator import ConfusionMatrix, EvaluationReport, RAGEvaluator, TestCaseResult
 from app.evaluation.test_dataset import EvaluationTestCase
 from app.pipeline.base import BaseInferencePipeline
 from app.pipeline.rag_pipeline import RAGPipeline
@@ -170,3 +170,148 @@ def test_evaluator_accepts_base_inference_pipeline_type(eval_pipeline):
     assert isinstance(eval_pipeline, BaseInferencePipeline)
     evaluator = RAGEvaluator(eval_pipeline)
     assert evaluator.pipeline is eval_pipeline
+
+
+# New tests: ConfusionMatrix pure-math (no pipeline required)
+
+
+def test_confusion_matrix_precision_recall_f1():
+    """Verify ConfusionMatrix computes P/R/F1 correctly for known values."""
+    cm = ConfusionMatrix(tp=8, fp=2, fn=2, tn=8)
+    assert abs(cm.precision - 0.8) < 1e-6
+    assert abs(cm.recall - 0.8) < 1e-6
+    assert abs(cm.f1_score - 0.8) < 1e-6
+    assert abs(cm.accuracy - 0.8) < 1e-6
+
+
+def test_confusion_matrix_zero_division_safety():
+    """ConfusionMatrix with all-zero counts must return 0.0 for all metrics."""
+    cm = ConfusionMatrix()
+    assert cm.precision == 0.0
+    assert cm.recall == 0.0
+    assert cm.f1_score == 0.0
+    assert cm.accuracy == 0.0
+
+
+def test_confusion_matrix_to_dict_has_all_keys():
+    """to_dict() must expose all 8 expected keys."""
+    cm = ConfusionMatrix(tp=1, fp=0, fn=0, tn=1)
+    d = cm.to_dict()
+    for key in ("tp", "fp", "fn", "tn", "precision", "recall", "f1_score", "accuracy"):
+        assert key in d, f"Missing key: {key}"
+
+
+def test_confusion_matrix_perfect_retrieval():
+    """TP-only scenario yields precision=recall=f1=1.0."""
+    cm = ConfusionMatrix(tp=5, fp=0, fn=0, tn=10)
+    assert cm.precision == 1.0
+    assert cm.recall == 1.0
+    assert cm.f1_score == 1.0
+
+
+# New tests: IR metrics on TestCaseResult (integration, uses pipeline)
+
+
+def test_testcase_result_has_ir_metric_fields(eval_pipeline):
+    """TestCaseResult must carry IR metric fields after evaluation."""
+    evaluator = RAGEvaluator(eval_pipeline)
+    tc = EvaluationTestCase(
+        test_id="IR-01",
+        question="What are the core hours?",
+        category="factual",
+        expected_keywords=["10:00"],
+        expected_source_files=["hr_test.txt"],
+        should_refuse=False,
+        description="IR metric fields test",
+        expected_snippets=["core hours"],
+        total_relevant_chunks=1,
+    )
+    res = evaluator.evaluate_test_case(tc)
+    assert hasattr(res, "context_precision_at_k")
+    assert hasattr(res, "context_recall_at_k")
+    assert hasattr(res, "context_f1_at_k")
+    assert hasattr(res, "reciprocal_rank")
+    assert hasattr(res, "hit_at_k")
+    assert hasattr(res, "noise_ratio")
+    assert isinstance(res.retrieved_chunks_detail, list)
+    assert 0.0 <= res.context_precision_at_k <= 1.0
+    assert 0.0 <= res.context_recall_at_k <= 1.0
+    assert 0.0 <= res.reciprocal_rank <= 1.0
+
+
+def test_report_has_confusion_matrices(eval_pipeline):
+    """EvaluationReport must contain retrieval and guardrail ConfusionMatrix instances."""
+    evaluator = RAGEvaluator(eval_pipeline)
+    cases = [
+        EvaluationTestCase(
+            test_id="CM-01",
+            question="What are the core hours?",
+            category="factual",
+            expected_keywords=["10:00"],
+            expected_source_files=["hr_test.txt"],
+            should_refuse=False,
+            description="CM test",
+            expected_snippets=["core hours"],
+            total_relevant_chunks=1,
+        ),
+        EvaluationTestCase(
+            test_id="CM-02",
+            question="What is the recipe for stealth fighter jets?",
+            category="out_of_scope",
+            expected_keywords=["insufficient"],
+            expected_source_files=[],
+            should_refuse=True,
+            description="Refusal CM test",
+        ),
+    ]
+    report = evaluator.run_benchmark(cases)
+    assert isinstance(report.retrieval_confusion_matrix, ConfusionMatrix)
+    assert isinstance(report.guardrail_confusion_matrix, ConfusionMatrix)
+    # Guardrail: one refusal case — should be TP or FN in guardrail matrix
+    grd = report.guardrail_confusion_matrix
+    assert grd.tp + grd.fn == 1  # one unsupported query
+
+
+def test_report_category_metrics_grouped(eval_pipeline):
+    """category_metrics must group results by category with required keys."""
+    evaluator = RAGEvaluator(eval_pipeline)
+    cases = [
+        EvaluationTestCase(
+            test_id="CAT-01",
+            question="What are the core hours?",
+            category="factual_single_doc",
+            expected_keywords=["10:00"],
+            expected_source_files=["hr_test.txt"],
+            should_refuse=False,
+            description="Category grouping test",
+        ),
+    ]
+    report = evaluator.run_benchmark(cases)
+    assert "factual_single_doc" in report.category_metrics
+    cat = report.category_metrics["factual_single_doc"]
+    for key in ("total", "passed", "pass_rate_pct", "mean_precision_at_k", "mean_recall_at_k", "avg_latency_ms"):
+        assert key in cat, f"Missing category metric key: {key}"
+
+
+def test_report_backward_compat_old_fields(eval_pipeline):
+    """to_dict() must still expose legacy accuracy percentage fields."""
+    evaluator = RAGEvaluator(eval_pipeline)
+    cases = [
+        EvaluationTestCase(
+            test_id="BC-01",
+            question="What are the core hours?",
+            category="factual",
+            expected_keywords=["10:00"],
+            expected_source_files=["hr_test.txt"],
+            should_refuse=False,
+            description="Backward compat test",
+        ),
+    ]
+    report = evaluator.run_benchmark(cases)
+    d = report.to_dict()
+    for key in ("retrieval_accuracy_pct", "grounding_accuracy_pct", "refusal_accuracy_pct"):
+        assert key in d, f"Legacy key missing from to_dict(): {key}"
+    # New IR keys must also be present
+    for key in ("mean_precision_at_k", "mean_recall_at_k", "mean_reciprocal_rank",
+                "retrieval_confusion_matrix", "guardrail_confusion_matrix", "category_metrics"):
+        assert key in d, f"New IR key missing from to_dict(): {key}"

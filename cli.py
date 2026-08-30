@@ -28,6 +28,7 @@ try:
 except ImportError:
     pass
 
+from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -292,63 +293,116 @@ def handle_status(pipeline: BaseRAGPipeline):
 
 
 def handle_evaluate(pipeline: BaseRAGPipeline):
-    """Run the 8-10 benchmark test cases and display formatted results."""
+    """Run the benchmark suite and display IR metrics with dual confusion matrices."""
+    success_c = UI_THEME["colors"]["success_color"]
     console.print(
-        f"\n[{UI_THEME['colors']['success_color']}]=== Running Automated RAG Evaluation Benchmark "
-        f"===[/{UI_THEME['colors']['success_color']}]"
+        f"\n[{success_c}]=== Automated RAG Evaluation Benchmark ===[/{success_c}]"
     )
     evaluator = RAGEvaluator(pipeline)
     report = evaluator.run_benchmark()
 
-    # Results Table
-    table = Table(title="Benchmark Test Case Results", border_style=UI_THEME["colors"]["table_primary_border"])
-    table.add_column("ID", style="bold")
-    table.add_column("Category", style="cyan")
-    table.add_column("Question Preview", style="white")
-    table.add_column("Retrieval", justify="center")
-    table.add_column("Grounding", justify="center")
-    table.add_column("Refusal", justify="center")
-    table.add_column("Status", justify="center", style="bold")
-    table.add_column("Latency", justify="right")
-
     pass_icon = UI_THEME["icons"]["test_passed"]
     fail_icon = UI_THEME["icons"]["test_failed"]
 
+    # Panel 1: Per-case results table
+
+    table = Table(
+        title="Benchmark Test Case Results",
+        border_style=UI_THEME["colors"]["table_primary_border"],
+    )
+    table.add_column("ID", style="bold")
+    table.add_column("Category", style="cyan")
+    table.add_column("Question Preview")
+    table.add_column("P@K", justify="right")
+    table.add_column("R@K", justify="right")
+    table.add_column("MRR", justify="right")
+    table.add_column("Guardrail", justify="center")
+    table.add_column("Status", justify="center", style="bold")
+    table.add_column("Latency", justify="right")
+
     for r in report.results:
-        ret_icon = pass_icon if r.retrieval_passed else fail_icon
-        grd_icon = pass_icon if r.grounding_passed else fail_icon
-        ref_icon = pass_icon if r.refusal_passed else fail_icon
-        status_text = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
+        is_ref = r.is_refusal
+        p_str  = "N/A" if is_ref else f"{r.context_precision_at_k:.2f}"
+        r_str  = "N/A" if is_ref else f"{r.context_recall_at_k:.2f}"
+        mrr_str = "N/A" if is_ref else f"{r.reciprocal_rank:.3f}"
+        grd_icon = pass_icon if r.refusal_passed else fail_icon
+        status = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
 
         table.add_row(
             r.test_id,
-            r.category,
-            r.question[:45] + "...",
-            ret_icon,
+            r.category.replace("_", " "),
+            r.question[:45] + "…",
+            p_str,
+            r_str,
+            mrr_str,
             grd_icon,
-            ref_icon,
-            status_text,
+            status,
             f"{r.latency_ms:.0f}ms",
         )
 
     console.print(table)
 
-    # Summary Metrics Panel
-    summary_text = Text()
-    summary_text.append(f"Total Tests: {report.total_tests}  |  ", style="bold")
-    summary_text.append(f"Passed: {report.passed_tests}  |  ", style=UI_THEME["colors"]["success_color"])
-    summary_text.append(
-        f"Failed: {report.failed_tests}  |  ",
-        style=UI_THEME["colors"]["error_color"] if report.failed_tests > 0 else UI_THEME["colors"]["success_color"],
-    )
-    summary_text.append(f"Pass Rate: {report.pass_rate_pct:.1f}%\n", style=UI_THEME["colors"]["info_color"])
-    summary_text.append(f"Retrieval Accuracy: {report.retrieval_accuracy_pct:.1f}%  |  ", style="white")
-    summary_text.append(f"Grounding Accuracy: {report.grounding_accuracy_pct:.1f}%  |  ", style="white")
-    summary_text.append(f"Refusal Accuracy: {report.refusal_accuracy_pct:.1f}%  |  ", style="white")
-    summary_text.append(f"Avg Latency: {report.avg_latency_ms:.1f}ms", style="white")
 
+    # Panel 2: Dual confusion matrices (side by side)
+
+    def _cm_table(cm, title: str, row_labels: list[str], col_labels: list[str]) -> Table:
+        t = Table(title=title, border_style="dim", min_width=38)
+        t.add_column("", style="dim")
+        t.add_column(f"Act: {col_labels[0]}", justify="center")
+        t.add_column(f"Act: {col_labels[1]}", justify="center")
+        t.add_row(
+            f"Pred: {row_labels[0]}",
+            f"[green]TP: {cm.tp}[/green]",
+            f"[yellow]FP: {cm.fp}[/yellow]",
+        )
+        t.add_row(
+            f"Pred: {row_labels[1]}",
+            f"[red]FN: {cm.fn}[/red]",
+            f"[green]TN: {cm.tn}[/green]",
+        )
+        return t
+
+    ret_cm  = report.retrieval_confusion_matrix
+    grd_cm  = report.guardrail_confusion_matrix
+
+    ret_table = _cm_table(ret_cm,  "Retrieval Confusion Matrix",
+                          ["Retrieved", "Omitted"], ["Relevant", "Irrelevant"])
+    grd_table = _cm_table(grd_cm,  "Guardrail Safety Matrix",
+                          ["Refused", "Answered"], ["Unsupported", "Supported"])
+
+    console.print(Columns([ret_table, grd_table]))
+
+    # Matrix derived stats
+    hallucination_rate = (
+        grd_cm.fn / (grd_cm.fn + grd_cm.tp) * 100
+        if (grd_cm.fn + grd_cm.tp) > 0 else 0.0
+    )
+    cm_stats = Text()
+    cm_stats.append("Retrieval — ", style="bold")
+    cm_stats.append(f"Precision: {ret_cm.precision * 100:.1f}%  ", style="white")
+    cm_stats.append(f"Recall: {ret_cm.recall * 100:.1f}%  ", style="white")
+    cm_stats.append(f"F1: {ret_cm.f1_score * 100:.1f}%    ", style="white")
+    cm_stats.append("Guardrail — ", style="bold")
+    cm_stats.append(f"Safe Precision: {grd_cm.precision * 100:.1f}%  ", style="white")
+    hall_style = "red" if hallucination_rate > 0 else "green"
+    cm_stats.append(f"Hallucination Rate: {hallucination_rate:.1f}%", style=hall_style)
+    console.print(Panel(cm_stats, border_style="dim"))
+
+    # Panel 3: IR summary
+
+    summary = Text()
+    summary.append(
+        f"Tests: {report.total_tests}  Passed: {report.passed_tests}  "
+        f"Failed: {report.failed_tests}  Pass Rate: {report.pass_rate_pct:.1f}%\n",
+        style="bold",
+    )
+    summary.append(f"Mean P@K: {report.mean_precision_at_k:.3f}  ", style="white")
+    summary.append(f"Mean R@K: {report.mean_recall_at_k:.3f}  ", style="white")
+    summary.append(f"MRR: {report.mean_reciprocal_rank:.3f}  ", style="white")
+    summary.append(f"Hit Rate: {report.overall_hit_rate_at_k * 100:.1f}%  ", style="white")
+    summary.append(f"Avg Latency: {report.avg_latency_ms:.1f}ms", style="white")
     console.print(
-        Panel(summary_text, title="Evaluation Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"])
+        Panel(summary, title="Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"])
     )
 
 

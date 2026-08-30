@@ -1131,3 +1131,185 @@ Changed
   Updated code snippets and Mermaid diagrams to reflect ``BaseRAGPipeline`` types,
   ``create_rag_pipeline()`` factory, and sub-pipeline composition in the architecture graph.
 
+
+----
+
+.. _v0.2.3:
+
+=============================
+v0.2.3 Release Changelog
+=============================
+
+Version bump: ``0.2.2`` → ``0.2.3``.
+Branch: ``v0.3/feat/rag-evaluation-metrics-and-ui``.
+
+Introduces industry-standard Information Retrieval (IR) metrics, dual 2×2 confusion
+matrices for retrieval and guardrail safety, offline generator modularization, and a
+redesigned Evaluation tab UI.
+
+
+----
+
+Offline Generator Modularization
+=================================
+
+Added
+-----
+
+* ``app/generation/assets.py`` [NEW]:
+  Centralizes all generation text constants previously inlined in ``generator.py``
+  (``DEFAULT_REFUSAL_TEXT``, ``FALLBACK_PROVIDER_NOTE_TEMPLATE``, ``REFUSAL_SIGNATURES``,
+  ``STOPWORDS``, ``ANCHOR_TERMS``).  Resolves the single-source-of-truth concern and
+  eliminates circular-import risk.
+
+* ``app/generation/offline_generator.py`` [NEW]:
+  Extracts the extractive offline fallback logic from ``LLMGenerator`` into a
+  standalone ``OfflineGroundedGenerator`` class with clear public interface
+  (``generate(prompt, start_time) → GenerationResult``).
+  Independently unit-testable without API keys or vector store.
+
+Changed
+-------
+
+* ``app/generation/generator.py``:
+  ``LLMGenerator.__init__`` now composes ``OfflineGroundedGenerator`` as ``self._offline``.
+  ``_generate_offline_response`` reduced to a one-line delegation.
+  Constants and file-loading helpers removed; imported from ``app.generation.assets``.
+
+
+----
+
+Evaluation: Dataset Enrichment
+================================
+
+Changed
+-------
+
+* ``app/evaluation/test_dataset.py``:
+  ``EvaluationTestCase`` gains two new fields (backward-compatible, both defaulted):
+
+  - ``expected_snippets: List[str]`` — ground-truth factual substrings for chunk-level
+    relevance scoring in P@K and Recall@K.
+  - ``total_relevant_chunks: int = 1`` — denominator for Recall@K.
+
+  All 10 benchmark test cases updated with realistic snippet and chunk count values.
+
+
+----
+
+Evaluation: Standard IR Metrics & Confusion Matrices
+======================================================
+
+Changed
+-------
+
+* ``app/evaluation/evaluator.py`` — complete redesign, backward-compatible:
+
+  **New ``ConfusionMatrix`` dataclass**:
+  Accumulates ``tp``, ``fp``, ``fn``, ``tn`` and exposes ``precision``, ``recall``,
+  ``f1_score``, ``accuracy`` properties plus ``to_dict()``.
+
+  **Enriched ``TestCaseResult``** (new fields alongside existing booleans):
+  ``context_precision_at_k``, ``context_recall_at_k``, ``context_f1_at_k``,
+  ``reciprocal_rank``, ``hit_at_k``, ``noise_ratio``, ``retrieved_chunks_detail``.
+
+  **Enriched ``EvaluationReport``** (new fields alongside legacy percentage fields):
+  ``mean_precision_at_k``, ``mean_recall_at_k``, ``mean_reciprocal_rank``,
+  ``overall_hit_rate_at_k``, ``avg_noise_ratio``,
+  ``retrieval_confusion_matrix: ConfusionMatrix``,
+  ``guardrail_confusion_matrix: ConfusionMatrix``,
+  ``category_metrics: Dict[str, Dict[str, float]]``.
+
+  **Chunk-level relevance scoring** in ``evaluate_test_case()``:
+  A retrieved chunk is marked relevant if ``source_filename`` matches
+  ``expected_source_files`` OR any ``expected_snippets`` substring appears in chunk text.
+  Computes P@K, R@K, F1@K, RR, Hit@K, Noise@K per test case.
+
+  **Guardrail confusion matrix** per test case:
+  ``should_refuse=True + is_refusal=True → TP`` (correct refusal),
+  ``should_refuse=True + is_refusal=False → FN`` (hallucination breach),
+  ``should_refuse=False + is_refusal=True → FP`` (false rejection),
+  ``should_refuse=False + is_refusal=False → TN`` (correct grounded answer).
+
+  **Backward compatibility**: legacy ``retrieval_accuracy_pct``,
+  ``grounding_accuracy_pct``, and ``refusal_accuracy_pct`` fields retained
+  in both the dataclass and ``to_dict()``.
+
+
+----
+
+Frontend: Evaluation Tab Redesign
+===================================
+
+Changed
+-------
+
+* ``templates/partials/tab_evaluation.html``:
+  Complete layout redesign. Summary metric card row now shows P@K, R@K, MRR, Hit Rate@K
+  (replacing old Retrieval/Grounding/Refusal bool cards). Two confusion matrix cards
+  rendered side-by-side. Results table columns changed to P@K, R@K, MRR, Guardrail, Status, ms.
+  All metric theory behind ``ⓘ`` tooltip buttons — no body text.
+
+* ``app/static/css/components/evaluation.css``:
+  New classes: ``.eval-matrices-row``, ``.confusion-matrix-grid``, ``.cm-cell``,
+  ``.cm-tp/.cm-tn`` (green), ``.cm-fp`` (amber), ``.cm-fn`` (red), ``.info-btn``,
+  ``.eval-tooltip``, ``.eval-row-drawer``, ``.eval-chunk-list``.
+  Responsive stacking at ``max-width: 768px``.
+
+* ``app/static/js/components/evaluation.js``:
+  Full rewrite. Renders confusion matrices from JSON, expandable per-row chunk drawers
+  showing ``retrieved_chunks_detail``, client-side category filter dropdown, ``ⓘ``
+  tooltip toggles. Zero ``innerHTML`` — all DOM via ``createElement`` / ``textContent``.
+
+
+----
+
+CLI: IR Metrics Dashboard
+==========================
+
+Changed
+-------
+
+* ``cli.py`` — ``handle_evaluate()``:
+  Results table columns: P@K, R@K, MRR, Guardrail, Status, Latency (replacing old
+  boolean flag columns). Two Rich ``Table`` objects printed side-by-side via
+  ``rich.columns.Columns``: Retrieval Confusion Matrix + Guardrail Safety Matrix.
+  Summary panel shows Mean P@K, Mean R@K, MRR, Hit Rate, Avg Latency.
+
+
+----
+
+Tests
+=====
+
+Added
+-----
+
+* ``app/generation/tests/test_offline_generator.py``:
+  4 unit tests for ``OfflineGroundedGenerator``: refusal on empty citations, refusal
+  on no matching sentences, grounded answer extraction, and ``max_sentences`` cap.
+
+* ``app/evaluation/tests/test_evaluation.py`` — 8 new tests:
+
+  - ``test_confusion_matrix_precision_recall_f1``: Mathematical correctness for known TP/FP/FN/TN.
+  - ``test_confusion_matrix_zero_division_safety``: All-zero matrix → 0.0 metrics.
+  - ``test_confusion_matrix_to_dict_has_all_keys``: All 8 keys present in serialization.
+  - ``test_confusion_matrix_perfect_retrieval``: TP-only → precision=recall=f1=1.0.
+  - ``test_testcase_result_has_ir_metric_fields``: Integration — new fields on result.
+  - ``test_report_has_confusion_matrices``: Integration — matrices populated and typed.
+  - ``test_report_category_metrics_grouped``: Integration — category_metrics keyed correctly.
+  - ``test_report_backward_compat_old_fields``: Legacy + new keys both in ``to_dict()``.
+
+
+----
+
+Documentation
+=============
+
+Changed
+-------
+
+* ``app/version.py``: Bumped ``0.2.2`` → ``0.2.3``.
+* ``docs/v0.2.0/core_functionalities/08_evaluation_benchmark_and_quality_assurance.md``:
+  Metric descriptions updated to cover IR standard metrics and confusion matrices.
+

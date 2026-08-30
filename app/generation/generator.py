@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 import time
 import typing
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional
 
 try:
@@ -45,33 +43,11 @@ except Exception:
 
 from app.augmentation.prompt_builder import AugmentedPrompt, CitationInfo
 from app.config import LLMConfig, config
+from app.generation.assets import (
+    FALLBACK_PROVIDER_NOTE_TEMPLATE,
+    REFUSAL_SIGNATURES,
+)
 from app.logging_config import logger
-
-# Asset paths and loaders
-_ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
-_GENERATION_TEXTS_PATH = _ASSETS_DIR / "configs" / "generation_texts.json"
-_NLP_STOPWORDS_PATH = _ASSETS_DIR / "configs" / "nlp_stopwords.json"
-
-
-def _load_json_asset(path: Path) -> Dict[str, Any]:
-    """Read and parse a JSON configuration asset file with fail-fast error handling."""
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"Configuration asset file not found: {path}. "
-            "Ensure the assets/configs/ directory is present and contains required JSON assets."
-        )
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-_GEN_TEXTS = _load_json_asset(_GENERATION_TEXTS_PATH)
-_NLP_DATA = _load_json_asset(_NLP_STOPWORDS_PATH)
-
-DEFAULT_REFUSAL_TEXT: str = _GEN_TEXTS["standard_refusal"]
-FALLBACK_PROVIDER_NOTE_TEMPLATE: str = _GEN_TEXTS["fallback_provider_note"]
-REFUSAL_SIGNATURES: List[str] = _GEN_TEXTS["refusal_signatures"]
-STOPWORDS: set[str] = set(_NLP_DATA["stopwords"])
-ANCHOR_TERMS: set[str] = set(_NLP_DATA["anchor_terms"])
 
 
 class GenerationError(Exception):
@@ -116,7 +92,13 @@ class LLMGenerator:
     """
 
     def __init__(self, llm_config: Optional[LLMConfig] = None):
+        from app.generation.offline_generator import OfflineGroundedGenerator
+
         self.config = llm_config or config.llm
+        self._offline = OfflineGroundedGenerator(
+            topic_threshold=getattr(self.config, "offline_topic_threshold", 0.4),
+            max_sentences=getattr(self.config, "offline_max_sentences", 4),
+        )
         # Configure litellm telemetry dynamically based on config
         litellm.suppress_debug_info = getattr(self.config, "suppress_debug_info", True)
         self._setup_api_keys()
@@ -169,101 +151,9 @@ class LLMGenerator:
         prompt: AugmentedPrompt,
         start_time: float,
     ) -> GenerationResult:
-        """
-        Extractive offline generator for deterministic testing and key-less demonstration.
-        Grounded strictly in retrieved context with keyword matching and refusal detection.
-        """
+        """Delegate to ``OfflineGroundedGenerator`` for extractive offline generation."""
         logger.info("Executing generation in offline/mock mode...")
-        elapsed_ms = (time.perf_counter() - start_time) * 1000
-        refusal_text = DEFAULT_REFUSAL_TEXT
-
-        if not prompt.citations_map or prompt.formatted_context == "[NO RELEVANT CONTEXT FOUND]":
-            return GenerationResult(
-                answer=refusal_text,
-                model="offline-grounded-fallback",
-                latency_ms=elapsed_ms,
-                prompt_tokens=len(prompt.full_prompt_text) // 4,
-                completion_tokens=len(refusal_text) // 4,
-                total_tokens=(len(prompt.full_prompt_text) + len(refusal_text)) // 4,
-                citations=[],
-                is_refusal=True,
-                is_offline_mode=True,
-            )
-
-        # Extract meaningful query keywords (words >= 3 chars, excluding common stop words)
-        stopwords = STOPWORDS
-        anchor_terms = ANCHOR_TERMS
-
-        raw_query_words = [
-            w.lower().strip("?,!.:;\"'()")
-            for w in prompt.user_query.split()
-            if len(w.strip("?,!.:;\"'()")) >= 3 and w.lower().strip("?,!.:;\"'()") not in stopwords
-        ]
-        topic_words = [w for w in raw_query_words if w not in anchor_terms]
-        query_words = raw_query_words
-
-        # Check if topic words exist anywhere in the combined context
-        all_context_lower = prompt.formatted_context.lower()
-        if topic_words:
-            matched_topic_words = [tw for tw in topic_words if tw in all_context_lower]
-            threshold = getattr(self.config, "offline_topic_threshold", 0.4)
-            # If less than configured threshold of topic words exist in context, refuse
-            if len(matched_topic_words) < max(1, len(topic_words) * threshold):
-                return GenerationResult(
-                    answer=refusal_text,
-                    model="offline-grounded-fallback",
-                    latency_ms=elapsed_ms,
-                    prompt_tokens=len(prompt.full_prompt_text) // 4,
-                    completion_tokens=len(refusal_text) // 4,
-                    total_tokens=(len(prompt.full_prompt_text) + len(refusal_text)) // 4,
-                    citations=[],
-                    is_refusal=True,
-                    is_offline_mode=True,
-                )
-
-        matched_sentences: List[str] = []
-        cited_sources: List[CitationInfo] = []
-
-        for idx, cit in prompt.citations_map.items():
-            raw_sentences = [s.strip() for s in cit.snippet.replace("\n", " ").split(". ") if s.strip()]
-            for sentence in raw_sentences:
-                sent_lower = sentence.lower()
-                match_count = sum(1 for qw in (topic_words or query_words) if qw in sent_lower)
-                if match_count > 0:
-                    clean_sent = sentence.rstrip(".") + "."
-                    matched_sentences.append(f"{clean_sent} [Source {idx}: {cit.filename}]")
-                    if cit not in cited_sources:
-                        cited_sources.append(cit)
-
-        # If no sentences contain any query terms, trigger refusal
-        if not matched_sentences:
-            return GenerationResult(
-                answer=refusal_text,
-                model="offline-grounded-fallback",
-                latency_ms=elapsed_ms,
-                prompt_tokens=len(prompt.full_prompt_text) // 4,
-                completion_tokens=len(refusal_text) // 4,
-                total_tokens=(len(prompt.full_prompt_text) + len(refusal_text)) // 4,
-                citations=[],
-                is_refusal=True,
-                is_offline_mode=True,
-            )
-
-        # Build grounded response from matched sentences up to configured sentence limit
-        max_sentences = getattr(self.config, "offline_max_sentences", 4)
-        answer = " ".join(matched_sentences[:max_sentences])
-
-        return GenerationResult(
-            answer=answer,
-            model="offline-grounded-fallback",
-            latency_ms=elapsed_ms,
-            prompt_tokens=len(prompt.full_prompt_text) // 4,
-            completion_tokens=len(answer) // 4,
-            total_tokens=(len(prompt.full_prompt_text) + len(answer)) // 4,
-            citations=cited_sources,
-            is_refusal=False,
-            is_offline_mode=True,
-        )
+        return self._offline.generate(prompt, start_time)
 
     def _prepare_completion_kwargs(
         self,
