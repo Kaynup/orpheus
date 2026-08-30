@@ -1,6 +1,6 @@
 # 𝚶𝚸𝚷𝚮𝚬𝚼𝚺
 
-![Version](https://img.shields.io/badge/version-v0.2.0--alpha-red) ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask&logoColor=white) ![ChromaDB](https://img.shields.io/badge/ChromaDB-0.4.22+-FF6F61) ![LiteLLM](https://img.shields.io/badge/LiteLLM-Multi--Provider-4A90E2)
+![Version](https://img.shields.io/badge/version-v0.2.3-yellow) ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask&logoColor=white) ![ChromaDB](https://img.shields.io/badge/ChromaDB-0.4.22+-FF6F61) ![LiteLLM](https://img.shields.io/badge/LiteLLM-Multi--Provider-4A90E2)
 
 Orpheus is a Retrieval-Augmented Generation (RAG) system with persistent vector storage, multi-provider LLM orchestration, and verifiable source citations.
 
