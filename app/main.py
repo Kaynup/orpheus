@@ -31,12 +31,13 @@ from app.api.routes import api_bp
 from app.api.security import setup_cors, setup_security_headers
 from app.config import config
 from app.logging_config import logger
-from app.pipeline.rag_pipeline import RAGPipeline
+from app.pipeline.base import BaseRAGPipeline
+from app.pipeline.factory import create_rag_pipeline
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def create_app(test_config: dict = None, pipeline: RAGPipeline | None = None) -> Flask:
+def create_app(test_config: dict = None, pipeline: BaseRAGPipeline | None = None) -> Flask:
     """Create and configure the Flask application."""
     app = Flask(
         __name__,
@@ -55,7 +56,7 @@ def create_app(test_config: dict = None, pipeline: RAGPipeline | None = None) ->
 
     # Attach RAG Pipeline instance
     if pipeline is None:
-        pipeline = RAGPipeline()
+        pipeline = create_rag_pipeline()
     app.extensions["rag_pipeline"] = pipeline
 
     # Attach security middleware & CORS

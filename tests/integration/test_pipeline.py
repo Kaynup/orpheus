@@ -5,7 +5,11 @@ multi-document lifecycle, and anti-hallucination guardrails.
 import pytest
 
 from app.config import AppConfig
+from app.pipeline.base import BaseInferencePipeline, BaseIngestionPipeline, BaseRAGPipeline
 from app.pipeline.events import EventStage
+from app.pipeline.factory import create_inference_pipeline, create_ingestion_pipeline, create_rag_pipeline
+from app.pipeline.inference_pipeline import QueryInferencePipeline
+from app.pipeline.ingestion_pipeline import DocumentIngestionPipeline
 from app.pipeline.rag_pipeline import RAGPipeline
 
 
@@ -142,3 +146,133 @@ def test_pipeline_multi_document_lifecycle_and_deletion(tmp_path):
     q_b_after = pipeline.answer_query("What is the monthly downtime limit?")
     assert q_b_after.has_relevant_context is True
     assert "4.38" in q_b_after.answer
+
+
+
+# New tests: pipeline modularity and interface compliance
+
+def test_rag_pipeline_isinstance_checks(tmp_path):
+    """Verify RAGPipeline satisfies all base interface protocols."""
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_isinstance_test")
+    cfg.storage.collection_name = "test_isinstance_col"
+    pipeline = RAGPipeline(app_config=cfg)
+    assert isinstance(pipeline, BaseRAGPipeline)
+    assert isinstance(pipeline, BaseIngestionPipeline)
+    assert isinstance(pipeline, BaseInferencePipeline)
+
+
+def test_document_ingestion_pipeline_isolated(tmp_path):
+    """Verify DocumentIngestionPipeline operates independently without inference components."""
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_ingest_isolated")
+    cfg.storage.collection_name = "test_ingest_isolated"
+    cfg.llm.model = "offline"
+
+    ingestion = DocumentIngestionPipeline(app_config=cfg)
+    assert isinstance(ingestion, BaseIngestionPipeline)
+
+    sample_file = tmp_path / "isolated_ingest_doc.txt"
+    sample_file.write_text(
+        "Isolated ingestion test content for pipeline decoupling verification.",
+        encoding="utf-8",
+    )
+    result = ingestion.ingest_document(sample_file)
+    assert result.chunk_count > 0
+    assert result.filename == "isolated_ingest_doc.txt"
+
+
+def test_query_inference_pipeline_isolated(tmp_path):
+    """Verify QueryInferencePipeline operates independently using a pre-populated VectorStore."""
+    from app.storage.vector_store import VectorStore
+
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_infer_isolated")
+    cfg.storage.collection_name = "test_infer_isolated"
+    cfg.llm.model = "offline"
+
+    shared_store = VectorStore(
+        persist_dir=cfg.storage.persist_dir,
+        collection_name=cfg.storage.collection_name,
+    )
+    ingestion = DocumentIngestionPipeline(app_config=cfg, vector_store=shared_store)
+    doc_file = tmp_path / "inference_test.txt"
+    doc_file.write_text("Acme employees receive 20 days of paid vacation.", encoding="utf-8")
+    ingestion.ingest_document(doc_file)
+
+    inference = QueryInferencePipeline(app_config=cfg, vector_store=shared_store)
+    assert isinstance(inference, BaseInferencePipeline)
+
+    result = inference.answer_query("How many days of vacation do employees get?")
+    assert result.has_relevant_context is True
+    assert result.is_refusal is False
+    assert "20 days" in result.answer
+
+
+def test_factory_create_rag_pipeline(tmp_path):
+    """Verify create_rag_pipeline factory returns a valid BaseRAGPipeline."""
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_factory_test")
+    cfg.storage.collection_name = "test_factory_col"
+    pipeline = create_rag_pipeline(app_config=cfg)
+    assert isinstance(pipeline, BaseRAGPipeline)
+    assert isinstance(pipeline, RAGPipeline)
+
+
+def test_factory_create_ingestion_pipeline(tmp_path):
+    """Verify create_ingestion_pipeline factory returns a valid BaseIngestionPipeline."""
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_factory_ingest")
+    cfg.storage.collection_name = "test_factory_ingest"
+    pipeline = create_ingestion_pipeline(app_config=cfg)
+    assert isinstance(pipeline, BaseIngestionPipeline)
+    assert isinstance(pipeline, DocumentIngestionPipeline)
+
+
+def test_factory_create_inference_pipeline(tmp_path):
+    """Verify create_inference_pipeline factory returns a valid BaseInferencePipeline."""
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_factory_infer")
+    cfg.storage.collection_name = "test_factory_infer"
+    pipeline = create_inference_pipeline(app_config=cfg)
+    assert isinstance(pipeline, BaseInferencePipeline)
+    assert isinstance(pipeline, QueryInferencePipeline)
+
+
+def test_evaluator_accepts_base_inference_pipeline(tmp_path):
+    """Verify RAGEvaluator accepts BaseInferencePipeline — not just concrete RAGPipeline."""
+    from app.evaluation.evaluator import RAGEvaluator
+    from app.evaluation.test_dataset import EvaluationTestCase
+    from app.storage.vector_store import VectorStore
+
+    cfg = AppConfig.from_env()
+    cfg.storage.persist_dir = str(tmp_path / "chroma_eval_base")
+    cfg.storage.collection_name = "test_eval_base"
+    cfg.llm.model = "offline"
+
+    shared_store = VectorStore(
+        persist_dir=cfg.storage.persist_dir,
+        collection_name=cfg.storage.collection_name,
+    )
+    ingestion = DocumentIngestionPipeline(app_config=cfg, vector_store=shared_store)
+    doc_file = tmp_path / "eval_isolation.txt"
+    doc_file.write_text(
+        "Acme core hours are 10:00 AM to 3:00 PM Eastern Time.",
+        encoding="utf-8",
+    )
+    ingestion.ingest_document(doc_file)
+
+    inference = create_inference_pipeline(app_config=cfg, vector_store=shared_store)
+    evaluator = RAGEvaluator(inference)
+
+    case = EvaluationTestCase(
+        test_id="BASE-01",
+        question="What are the core hours?",
+        category="factual",
+        expected_keywords=["10:00", "3:00"],
+        expected_source_files=["eval_isolation.txt"],
+        should_refuse=False,
+        description="Verify evaluator works with raw BaseInferencePipeline",
+    )
+    result = evaluator.evaluate_test_case(case)
+    assert result.retrieval_passed is True

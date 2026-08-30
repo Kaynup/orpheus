@@ -5,6 +5,7 @@ import pytest
 from app.config import AppConfig
 from app.evaluation.evaluator import EvaluationReport, RAGEvaluator, TestCaseResult
 from app.evaluation.test_dataset import EvaluationTestCase
+from app.pipeline.base import BaseInferencePipeline
 from app.pipeline.rag_pipeline import RAGPipeline
 
 
@@ -162,3 +163,10 @@ def test_evaluator_punctuation_and_number_normalization(eval_pipeline):
     res = evaluator.evaluate_test_case(test_case)
     assert res.grounding_passed is True
     assert res.passed is True
+
+
+def test_evaluator_accepts_base_inference_pipeline_type(eval_pipeline):
+    """Verify RAGEvaluator type annotation accepts BaseInferencePipeline."""
+    assert isinstance(eval_pipeline, BaseInferencePipeline)
+    evaluator = RAGEvaluator(eval_pipeline)
+    assert evaluator.pipeline is eval_pipeline

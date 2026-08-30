@@ -9,6 +9,7 @@ from app.api.security import save_uploaded_file, setup_cors
 from app.config import config
 from app.ingestion.validator import FileValidationError
 from app.main import create_app
+from app.pipeline.base import BaseRAGPipeline
 from app.pipeline.rag_pipeline import RAGPipeline
 from app.version import __version__
 
@@ -114,6 +115,7 @@ def test_create_app_with_custom_injected_pipeline():
 
     assert "rag_pipeline" in app.extensions
     assert app.extensions["rag_pipeline"] is custom_pipeline
+    assert isinstance(app.extensions["rag_pipeline"], BaseRAGPipeline)
 
     with app.test_client() as test_client:
         res = test_client.get("/api/status")

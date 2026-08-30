@@ -9,7 +9,8 @@ from typing import Any, Dict, List, Optional
 
 from app.evaluation.test_dataset import BENCHMARK_TEST_SUITE, EvaluationTestCase
 from app.logging_config import logger
-from app.pipeline.rag_pipeline import QueryResult, RAGPipeline
+from app.pipeline.base import BaseInferencePipeline
+from app.pipeline.models import QueryResult
 
 
 @dataclass
@@ -82,11 +83,13 @@ class EvaluationReport:
 
 
 class RAGEvaluator:
-    """
-    Evaluates a RAGPipeline against benchmark test cases.
+    """Evaluates a pipeline against benchmark test cases.
+
+    Accepts any ``BaseInferencePipeline`` implementation, not just the concrete
+    ``RAGPipeline``, enabling independent evaluation runs on the inference sub-pipeline.
     """
 
-    def __init__(self, pipeline: RAGPipeline):
+    def __init__(self, pipeline: BaseInferencePipeline):
         self.pipeline = pipeline
 
     def evaluate_test_case(self, test_case: EvaluationTestCase) -> TestCaseResult:

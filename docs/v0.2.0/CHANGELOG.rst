@@ -995,3 +995,139 @@ Changed
   - Restructured tech stack specifications, feature matrix, and CLI usage documentation.
 
 
+----
+
+=============================
+v0.2.2 Release Changelog
+=============================
+
+This section records all architectural changes introduced in ``v0.2.2``,
+covering the ``v0.2.1``…``HEAD`` range on branch ``v0.3/feat/base-pipeline-dependency``.
+
+
+Version Bump
+============
+
+* Application version updated from ``0.2.1`` to ``0.2.2`` in ``app/version.py``.
+
+
+----
+
+Pipeline Modularity & Abstract Base Interfaces
+===============================================
+
+Refactored
+----------
+
+* **Abstract Base Pipeline Contracts**
+  (``app/pipeline/base.py`` — new file):
+
+  - ``BasePipeline``: root ABC with shared ``config: AppConfig`` and ``_emit_event()`` utility.
+  - ``BaseIngestionPipeline(BasePipeline)``: abstract ``ingest_document()`` and ``delete_document()``.
+  - ``BaseInferencePipeline(BasePipeline)``: abstract ``answer_query()`` and default ``stream_query()``.
+  - ``BaseRAGPipeline(BaseIngestionPipeline, BaseInferencePipeline)``: combined marker interface.
+
+* **Result Dataclasses Extraction**
+  (``app/pipeline/models.py`` — new file):
+
+  - ``IngestionResult`` and ``QueryResult`` moved from ``rag_pipeline.py`` to avoid
+    circular imports between sub-pipeline modules and the facade.
+  - Backward-compatible re-exports remain in ``rag_pipeline.py``.
+
+* **Document Ingestion Sub-Pipeline**
+  (``app/pipeline/ingestion_pipeline.py`` — new file):
+
+  - ``DocumentIngestionPipeline`` implements ``BaseIngestionPipeline``, owns Stages 1–3.
+  - Contains parser, chunker, and vector-store components only; no LLM dependencies.
+
+* **Query Inference Sub-Pipeline**
+  (``app/pipeline/inference_pipeline.py`` — new file):
+
+  - ``QueryInferencePipeline`` implements ``BaseInferencePipeline``, owns Stages 4–7.
+  - Contains retriever, prompt-builder, and LLM generator only; no parser dependencies.
+
+* **Pipeline Factory**
+  (``app/pipeline/factory.py`` — new file):
+
+  - ``create_rag_pipeline()``, ``create_ingestion_pipeline()``,
+    ``create_inference_pipeline()`` as the single source of instantiation.
+  - All return abstract types, decoupling callers from concrete classes.
+
+* **``RAGPipeline`` reduced to Facade**
+  (``app/pipeline/rag_pipeline.py``):
+
+  - Reduced from 505 to ~170 lines.
+  - Inherits ``BaseRAGPipeline``; delegates to injected ``DocumentIngestionPipeline``
+    and ``QueryInferencePipeline`` over a shared ``VectorStore``.
+  - Constructor accepts optional ``ingestion_pipeline`` and ``inference_pipeline``
+    parameters for full dependency injection.
+
+* **Pipeline Package Exports**
+  (``app/pipeline/__init__.py``):
+
+  - Expanded ``__all__`` to include all new symbols.
+
+
+----
+
+Consumer & Integration Updates
+================================
+
+Changed
+-------
+
+* **Flask Application Factory** (``app/main.py``, ``app/api/routes.py``):
+
+  - ``create_app()`` and ``get_pipeline()`` now use ``BaseRAGPipeline`` type.
+  - Pipeline construction via ``create_rag_pipeline()`` factory, not direct instantiation.
+
+* **CLI Handle Functions** (``cli.py``):
+
+  - All six ``handle_*`` signatures accept ``BaseRAGPipeline``; top-level instantiation
+    uses ``create_rag_pipeline()``.
+
+* **RAG Evaluator** (``app/evaluation/evaluator.py``):
+
+  - ``RAGEvaluator.__init__`` accepts ``BaseInferencePipeline`` (not ``RAGPipeline``),
+    since evaluation only calls ``answer_query()``.
+
+
+----
+
+Test Suite
+===========
+
+Added
+-----
+
+* 7 new integration tests in ``tests/integration/test_pipeline.py``:
+  ``isinstance`` compliance, isolated ingestion, isolated inference, three factory
+  function checks, and evaluator decoupling with ``BaseInferencePipeline``.
+* 1 new unit test in ``app/evaluation/tests/test_evaluation.py``:
+  evaluator accepts ``BaseInferencePipeline`` at type level.
+
+Changed
+-------
+
+* ``app/api/tests/test_api_security.py``: Added ``isinstance(pipeline, BaseRAGPipeline)``
+  assertion to ``test_create_app_with_custom_injected_pipeline``.
+
+
+----
+
+Documentation
+=============
+
+Added
+-----
+
+* ``docs/v0.2.0/core_functionalities/09_pipeline_modularity_and_interfaces.md``:
+  Full reference for the ABC hierarchy, class diagram, factory usage, and consumer contracts.
+
+Changed
+-------
+
+* ``docs/v0.2.0/core_functionalities/07_api_web_interface_and_event_streaming.md``:
+  Updated code snippets and Mermaid diagrams to reflect ``BaseRAGPipeline`` types,
+  ``create_rag_pipeline()`` factory, and sub-pipeline composition in the architecture graph.
+

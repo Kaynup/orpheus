@@ -16,12 +16,14 @@ from app.api.security import save_uploaded_file
 from app.config import config
 from app.evaluation.evaluator import RAGEvaluator
 from app.logging_config import logger
+from app.pipeline.base import BaseRAGPipeline
 from app.pipeline.events import PipelineEvent
-from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
+from app.pipeline.factory import create_rag_pipeline
+from app.pipeline.rag_pipeline import IngestionResult, QueryResult
 
 api_bp = Blueprint("api", __name__)
 
-_default_pipeline: RAGPipeline | None = None
+_default_pipeline: BaseRAGPipeline | None = None
 
 
 def resolve_model_item(model_str: str, source_badge: str = "Configured") -> dict[str, str]:
@@ -144,7 +146,7 @@ def get_available_models() -> list[dict[str, str]]:
     return models
 
 
-def get_pipeline() -> RAGPipeline:
+def get_pipeline() -> BaseRAGPipeline:
     """Retrieve the RAGPipeline instance from current Flask application context or fallback."""
     from flask import current_app
 
@@ -158,7 +160,7 @@ def get_pipeline() -> RAGPipeline:
 
     global _default_pipeline
     if _default_pipeline is None:
-        _default_pipeline = RAGPipeline()
+        _default_pipeline = create_rag_pipeline()
     return _default_pipeline
 
 

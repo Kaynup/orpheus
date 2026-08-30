@@ -35,8 +35,10 @@ from rich.text import Text
 
 from app.config import config
 from app.evaluation.evaluator import RAGEvaluator
+from app.pipeline.base import BaseRAGPipeline
 from app.pipeline.events import PipelineEvent
-from app.pipeline.rag_pipeline import IngestionResult, QueryResult, RAGPipeline
+from app.pipeline.factory import create_rag_pipeline
+from app.pipeline.rag_pipeline import IngestionResult, QueryResult
 
 console = Console()
 
@@ -102,7 +104,7 @@ def cli_event_listener(event: PipelineEvent):
     console.print(f"  {status_icon} [{stage_color}]{event.stage.value:<20}[/{stage_color}] {event.message}")
 
 
-def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None, chunk_overlap: int = None):
+def handle_ingest(pipeline: BaseRAGPipeline, file_path: str, chunk_size: int = None, chunk_overlap: int = None):
     """Ingest a single document file."""
     path = Path(file_path)
     if not path.exists():
@@ -144,7 +146,7 @@ def handle_ingest(pipeline: RAGPipeline, file_path: str, chunk_size: int = None,
         sys.exit(1)
 
 
-def handle_ingest_samples(pipeline: RAGPipeline):
+def handle_ingest_samples(pipeline: BaseRAGPipeline):
     """Ingest all sample documents from data/sample_documents/."""
     samples_dir = Path(config.storage.samples_dir)
     if not samples_dir.exists():
@@ -167,7 +169,7 @@ def handle_ingest_samples(pipeline: RAGPipeline):
         handle_ingest(pipeline, str(f))
 
 
-def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = False, top_k: int = None):
+def handle_ask(pipeline: BaseRAGPipeline, question: str, inspect_prompt: bool = False, top_k: int = None):
     """Submit a question to the RAG pipeline and display transparent results."""
     console.print(
         f"\n[{UI_THEME['colors']['success_color']}]=== Processing Question ===[/{UI_THEME['colors']['success_color']}]"
@@ -255,7 +257,7 @@ def handle_ask(pipeline: RAGPipeline, question: str, inspect_prompt: bool = Fals
         )
 
 
-def handle_status(pipeline: RAGPipeline):
+def handle_status(pipeline: BaseRAGPipeline):
     """Display vector store statistics and indexed documents."""
     stats = pipeline.vector_store.get_collection_stats()
 
@@ -289,7 +291,7 @@ def handle_status(pipeline: RAGPipeline):
         console.print(doc_table)
 
 
-def handle_evaluate(pipeline: RAGPipeline):
+def handle_evaluate(pipeline: BaseRAGPipeline):
     """Run the 8-10 benchmark test cases and display formatted results."""
     console.print(
         f"\n[{UI_THEME['colors']['success_color']}]=== Running Automated RAG Evaluation Benchmark "
@@ -350,7 +352,7 @@ def handle_evaluate(pipeline: RAGPipeline):
     )
 
 
-def handle_interactive(pipeline: RAGPipeline):
+def handle_interactive(pipeline: BaseRAGPipeline):
     """Launch interactive REPL mode for submitting questions."""
     print_banner()
     bullet = UI_THEME["icons"]["bullet"]
@@ -432,7 +434,7 @@ def main():
     args = parser.parse_args()
 
     # Initialize RAG Pipeline
-    pipeline = RAGPipeline()
+    pipeline = create_rag_pipeline()
 
     if args.command == "ingest":
         print_banner()

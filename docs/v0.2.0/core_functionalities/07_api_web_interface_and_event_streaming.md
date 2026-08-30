@@ -44,7 +44,9 @@ graph TD
     end
 
     subgraph PipelineCore ["RAG Core Pipeline"]
-        Orchestrator["RAGPipeline (rag_pipeline.py)"]
+        Orchestrator["RAGPipeline (Facade)"]
+        IngestionSub["DocumentIngestionPipeline (Stages 1-3)"]
+        InferenceSub["QueryInferencePipeline (Stages 4-7)"]
     end
 
     Browser --> AppBootstrap
@@ -57,6 +59,8 @@ graph TD
     Routes --> SecurityMW
     Routes --> PipelineDI
     PipelineDI --> Orchestrator
+    Orchestrator --> IngestionSub
+    Orchestrator --> InferenceSub
 
     ChatComp <--> EventBus
     InspectComp <--> EventBus
@@ -73,15 +77,19 @@ graph TD
 In `app/main.py`, `create_app()` initializes the Flask application with optional configuration and pipeline injection:
 
 ```python
-def create_app(test_config: Optional[Dict[str, Any]] = None, pipeline: Optional[RAGPipeline] = None) -> Flask:
+# app/main.py (v0.2.2+)
+from app.pipeline.base import BaseRAGPipeline
+from app.pipeline.factory import create_rag_pipeline
+
+def create_app(test_config: Optional[Dict[str, Any]] = None, pipeline: Optional[BaseRAGPipeline] = None) -> Flask:
     app = Flask(__name__, template_folder=str(BASE_DIR / "templates"), static_folder=str(BASE_DIR / "app" / "static"))
     
     # Configure security headers & CORS
     setup_security_headers(app)
     setup_cors(app, allowed_origins=config.server.cors_origins)
     
-    # Dependency Injection: Store pipeline instance in application extensions
-    app.extensions["rag_pipeline"] = pipeline if pipeline is not None else RAGPipeline()
+    # Dependency Injection: pipeline is any BaseRAGPipeline; factory is used as default
+    app.extensions["rag_pipeline"] = pipeline if pipeline is not None else create_rag_pipeline()
     
     app.register_blueprint(api_bp)
     return app
@@ -95,11 +103,11 @@ flowchart TD
     Req["Incoming API Request (e.g. POST /api/query)"] --> ContextCheck{"Within Flask App Context?"}
     
     ContextCheck -- "Yes" --> CheckExt{"'rag_pipeline' in current_app.extensions?"}
-    CheckExt -- "Found" --> InjectedInstance["Return Injected RAGPipeline Instance"]
-    CheckExt -- "Missing" --> FallbackCreate["Create & Store New RAGPipeline"]
+    CheckExt -- "Found" --> InjectedInstance["Return Injected BaseRAGPipeline Instance"]
+    CheckExt -- "Missing" --> FallbackCreate["create_rag_pipeline() via factory"]
     
     ContextCheck -- "No (Out of Context)" --> CatchRuntime["Catch RuntimeError"]
-    CatchRuntime --> ModuleSingleton["Return Module-Level _default_pipeline"]
+    CatchRuntime --> ModuleSingleton["Return Module-Level _default_pipeline (BaseRAGPipeline)"]
 
     InjectedInstance --> ExecuteRoute["Execute Route Handler Logic"]
     FallbackCreate --> ExecuteRoute
