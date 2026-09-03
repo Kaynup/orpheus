@@ -1,3 +1,18 @@
+[project]
+name = "orpheus-rag"
+version = "0.2.3"
+description = "Retrieval-Augmented Generation (RAG) system with persistent vector storage and verifiable source citations."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 [tool.ruff]
 # Set the maximum line length to 120
 line-length = 120

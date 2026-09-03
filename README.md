@@ -1,6 +1,6 @@
 # 𝚶𝚸𝚷𝚮𝚬𝚼𝚺
 
-![Version](https://img.shields.io/badge/version-v0.2.3-yellow) ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask&logoColor=white) ![ChromaDB](https://img.shields.io/badge/ChromaDB-0.4.22+-FF6F61) ![LiteLLM](https://img.shields.io/badge/LiteLLM-Multi--Provider-4A90E2)
+![Version](https://img.shields.io/badge/version-v0.2.3-yellow) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue) ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask&logoColor=white) ![ChromaDB](https://img.shields.io/badge/ChromaDB-0.4.22+-FF6F61) ![LiteLLM](https://img.shields.io/badge/LiteLLM-Multi--Provider-4A90E2)
 
 Orpheus is a Retrieval-Augmented Generation (RAG) system with persistent vector storage, multi-provider LLM orchestration, and verifiable source citations.
 
@@ -105,3 +105,22 @@ make test
 
 ## Documentation
 Detailed architectural specifications and release notes are available in the [`docs/`](./docs/v0.2.0/) directory.
+
+---
+
+## Contributing
+Contributions are warmly welcomed! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for development environment setup, architectural guidelines (high cohesion, low coupling, SSOT), code formatting rules (`make lint`), and our Developer Certificate of Origin (DCO) commit sign-off process.
+
+---
+
+## License & Trademark Notice
+
+### License
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](LICENSE) file for details.
+
+Under the GNU AGPL-3.0:
+* Anyone modifying and running Orpheus on a server or providing it over a network (SaaS / API) **must** make the complete source code of their modified version freely available under the AGPL-3.0.
+* Incorporating Orpheus code into closed-source, proprietary software is strictly prohibited without a commercial license.
+
+### Trademark & Branding
+The name **"Orpheus"**, associated logos, and branding assets are intellectual property of the author and project maintainers. The grant of this open-source copyright license does not convey any right or license to use the "Orpheus" trademark or trade name for commercial or proprietary derivative distributions without explicit prior written authorization.
