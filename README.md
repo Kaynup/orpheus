@@ -113,14 +113,6 @@ Contributions are warmly welcomed! Please review [CONTRIBUTING.md](CONTRIBUTING.
 
 ---
 
-## License & Trademark Notice
+## License
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See [LICENSE](LICENSE) for full legal terms and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and project policies.
 
-### License
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](LICENSE) file for details.
-
-Under the GNU AGPL-3.0:
-* Anyone modifying and running Orpheus on a server or providing it over a network (SaaS / API) **must** make the complete source code of their modified version freely available under the AGPL-3.0.
-* Incorporating Orpheus code into closed-source, proprietary software is strictly prohibited without a commercial license.
-
-### Trademark & Branding
-The name **"Orpheus"**, associated logos, and branding assets are intellectual property of the author and project maintainers. The grant of this open-source copyright license does not convey any right or license to use the "Orpheus" trademark or trade name for commercial or proprietary derivative distributions without explicit prior written authorization.
