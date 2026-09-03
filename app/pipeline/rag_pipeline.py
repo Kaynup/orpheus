@@ -89,7 +89,6 @@ class RAGPipeline(BaseRAGPipeline):
             type(self._inference).__name__,
         )
 
-
     # BaseIngestionPipeline
 
     def ingest_document(
@@ -110,7 +109,6 @@ class RAGPipeline(BaseRAGPipeline):
     def delete_document(self, doc_id: str) -> bool:
         """Delegate to the ``DocumentIngestionPipeline``."""
         return self._ingestion.delete_document(doc_id=doc_id)
-
 
     # BaseInferencePipeline
 

@@ -312,6 +312,12 @@ def test_report_backward_compat_old_fields(eval_pipeline):
     for key in ("retrieval_accuracy_pct", "grounding_accuracy_pct", "refusal_accuracy_pct"):
         assert key in d, f"Legacy key missing from to_dict(): {key}"
     # New IR keys must also be present
-    for key in ("mean_precision_at_k", "mean_recall_at_k", "mean_reciprocal_rank",
-                "retrieval_confusion_matrix", "guardrail_confusion_matrix", "category_metrics"):
+    for key in (
+        "mean_precision_at_k",
+        "mean_recall_at_k",
+        "mean_reciprocal_rank",
+        "retrieval_confusion_matrix",
+        "guardrail_confusion_matrix",
+        "category_metrics",
+    ):
         assert key in d, f"New IR key missing from to_dict(): {key}"

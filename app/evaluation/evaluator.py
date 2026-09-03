@@ -121,7 +121,6 @@ class TestCaseResult:
         }
 
 
-
 # Aggregate Report
 
 
@@ -184,7 +183,6 @@ class EvaluationReport:
         }
 
 
-
 # Evaluator
 
 
@@ -216,11 +214,9 @@ class RAGEvaluator:
 
         failure_reasons: List[str] = []
 
-
         # 1. IR metrics — chunk-level relevance scoring
 
         ir = self._compute_ir_metrics(test_case, retrieved_chunks)
-
 
         # 2. Refusal / grounding / citation scoring
 
@@ -246,9 +242,7 @@ class RAGEvaluator:
             for expected_doc in test_case.expected_source_files:
                 if not any(expected_doc.lower() in src.lower() for src in retrieved_sources):
                     retrieval_passed = False
-                    failure_reasons.append(
-                        f"Expected source '{expected_doc}' not found in retrieved chunks."
-                    )
+                    failure_reasons.append(f"Expected source '{expected_doc}' not found in retrieved chunks.")
 
             def _normalize_text(text: str) -> str:
                 return re.sub(r"[\s\-_,]+", " ", text.lower()).strip()
@@ -279,7 +273,6 @@ class RAGEvaluator:
             if not citation_passed:
                 failure_reasons.append("Answer lacks required source citations.")
 
-
         # 3. Length constraint
 
         length_passed = True
@@ -292,13 +285,7 @@ class RAGEvaluator:
                     f"Answer exceeds maximum length ({effective_len} > {test_case.max_length} chars)."
                 )
 
-        overall_passed = (
-            retrieval_passed
-            and grounding_passed
-            and citation_passed
-            and refusal_passed
-            and length_passed
-        )
+        overall_passed = retrieval_passed and grounding_passed and citation_passed and refusal_passed and length_passed
 
         logger.info(
             "Test %s (%s): Passed=%s | P@K=%.2f R@K=%.2f RR=%.2f",
@@ -335,7 +322,6 @@ class RAGEvaluator:
         )
 
     # Benchmark aggregation
-
 
     def run_benchmark(
         self,
@@ -438,9 +424,7 @@ class RAGEvaluator:
             score = getattr(chunk, "similarity", 0.0)
 
             # Relevance: source file match OR snippet substring match
-            source_match = any(
-                exp.lower() in source.lower() for exp in test_case.expected_source_files
-            )
+            source_match = any(exp.lower() in source.lower() for exp in test_case.expected_source_files)
             snippet_match = any(snip.lower() in text.lower() for snip in test_case.expected_snippets)
             is_relevant = source_match or snippet_match
 
@@ -507,14 +491,14 @@ class RAGEvaluator:
             # --- Guardrail matrix ---
             if case.should_refuse:
                 if res.is_refusal:
-                    grd_cm.tp += 1   # Correct refusal
+                    grd_cm.tp += 1  # Correct refusal
                 else:
-                    grd_cm.fn += 1   # Hallucination breach
+                    grd_cm.fn += 1  # Hallucination breach
             else:
                 if res.is_refusal:
-                    grd_cm.fp += 1   # False rejection
+                    grd_cm.fp += 1  # False rejection
                 else:
-                    grd_cm.tn += 1   # Correct grounded answer
+                    grd_cm.tn += 1  # Correct grounded answer
 
         return ret_cm, grd_cm
 

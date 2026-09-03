@@ -148,8 +148,8 @@ def test_pipeline_multi_document_lifecycle_and_deletion(tmp_path):
     assert "4.38" in q_b_after.answer
 
 
-
 # New tests: pipeline modularity and interface compliance
+
 
 def test_rag_pipeline_isinstance_checks(tmp_path):
     """Verify RAGPipeline satisfies all base interface protocols."""

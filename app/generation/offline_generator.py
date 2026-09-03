@@ -79,9 +79,7 @@ class OfflineGroundedGenerator:
                 )
                 return self._refusal(elapsed_ms, prompt)
 
-        matched_sentences, cited_sources = self._extract_sentences(
-            prompt, topic_words or query_words
-        )
+        matched_sentences, cited_sources = self._extract_sentences(prompt, topic_words or query_words)
 
         if not matched_sentences:
             logger.debug("Offline generator: no matching sentences — refusing.")
@@ -108,8 +106,7 @@ class OfflineGroundedGenerator:
         raw_words = [
             w.lower().strip("?,!.:;\"'()")
             for w in user_query.split()
-            if len(w.strip("?,!.:;\"'()")) >= 3
-            and w.lower().strip("?,!.:;\"'()") not in STOPWORDS
+            if len(w.strip("?,!.:;\"'()")) >= 3 and w.lower().strip("?,!.:;\"'()") not in STOPWORDS
         ]
         topic_words = [w for w in raw_words if w not in ANCHOR_TERMS]
         return topic_words, raw_words

@@ -295,9 +295,7 @@ def handle_status(pipeline: BaseRAGPipeline):
 def handle_evaluate(pipeline: BaseRAGPipeline):
     """Run the benchmark suite and display IR metrics with dual confusion matrices."""
     success_c = UI_THEME["colors"]["success_color"]
-    console.print(
-        f"\n[{success_c}]=== Automated RAG Evaluation Benchmark ===[/{success_c}]"
-    )
+    console.print(f"\n[{success_c}]=== Automated RAG Evaluation Benchmark ===[/{success_c}]")
     evaluator = RAGEvaluator(pipeline)
     report = evaluator.run_benchmark()
 
@@ -322,8 +320,8 @@ def handle_evaluate(pipeline: BaseRAGPipeline):
 
     for r in report.results:
         is_ref = r.is_refusal
-        p_str  = "N/A" if is_ref else f"{r.context_precision_at_k:.2f}"
-        r_str  = "N/A" if is_ref else f"{r.context_recall_at_k:.2f}"
+        p_str = "N/A" if is_ref else f"{r.context_precision_at_k:.2f}"
+        r_str = "N/A" if is_ref else f"{r.context_recall_at_k:.2f}"
         mrr_str = "N/A" if is_ref else f"{r.reciprocal_rank:.3f}"
         grd_icon = pass_icon if r.refusal_passed else fail_icon
         status = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
@@ -341,7 +339,6 @@ def handle_evaluate(pipeline: BaseRAGPipeline):
         )
 
     console.print(table)
-
 
     # Panel 2: Dual confusion matrices (side by side)
 
@@ -362,21 +359,16 @@ def handle_evaluate(pipeline: BaseRAGPipeline):
         )
         return t
 
-    ret_cm  = report.retrieval_confusion_matrix
-    grd_cm  = report.guardrail_confusion_matrix
+    ret_cm = report.retrieval_confusion_matrix
+    grd_cm = report.guardrail_confusion_matrix
 
-    ret_table = _cm_table(ret_cm,  "Retrieval Confusion Matrix",
-                          ["Retrieved", "Omitted"], ["Relevant", "Irrelevant"])
-    grd_table = _cm_table(grd_cm,  "Guardrail Safety Matrix",
-                          ["Refused", "Answered"], ["Unsupported", "Supported"])
+    ret_table = _cm_table(ret_cm, "Retrieval Confusion Matrix", ["Retrieved", "Omitted"], ["Relevant", "Irrelevant"])
+    grd_table = _cm_table(grd_cm, "Guardrail Safety Matrix", ["Refused", "Answered"], ["Unsupported", "Supported"])
 
     console.print(Columns([ret_table, grd_table]))
 
     # Matrix derived stats
-    hallucination_rate = (
-        grd_cm.fn / (grd_cm.fn + grd_cm.tp) * 100
-        if (grd_cm.fn + grd_cm.tp) > 0 else 0.0
-    )
+    hallucination_rate = grd_cm.fn / (grd_cm.fn + grd_cm.tp) * 100 if (grd_cm.fn + grd_cm.tp) > 0 else 0.0
     cm_stats = Text()
     cm_stats.append("Retrieval — ", style="bold")
     cm_stats.append(f"Precision: {ret_cm.precision * 100:.1f}%  ", style="white")
@@ -401,9 +393,7 @@ def handle_evaluate(pipeline: BaseRAGPipeline):
     summary.append(f"MRR: {report.mean_reciprocal_rank:.3f}  ", style="white")
     summary.append(f"Hit Rate: {report.overall_hit_rate_at_k * 100:.1f}%  ", style="white")
     summary.append(f"Avg Latency: {report.avg_latency_ms:.1f}ms", style="white")
-    console.print(
-        Panel(summary, title="Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"])
-    )
+    console.print(Panel(summary, title="Benchmark Summary", border_style=UI_THEME["colors"]["banner_border"]))
 
 
 def handle_interactive(pipeline: BaseRAGPipeline):
