@@ -114,19 +114,44 @@ All code contributions must adhere to Orpheus's core architecture:
 
 ## 5. Development & Testing Workflow
 
-### Setup
+### Setup (Fork & Clone)
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/Orpheus-RAG.git
-cd Orpheus-RAG
+# 1. Fork https://github.com/Kaynup/orpheus on GitHub to your account
+# 2. Clone your personal fork
+git clone https://github.com/<your-username>/orpheus.git
+cd orpheus
 
-# Create and activate a virtual environment
+# 3. Add the upstream remote to stay synchronized
+git remote add upstream https://github.com/Kaynup/orpheus.git
+
+# 4. Create and activate a virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
+# 5. Install dependencies
 make install
+```
+
+### Branch Naming Conventions
+
+> [!IMPORTANT]
+> **Owner & Core Dev Branches Reserved**:
+> Branch names starting with `v*` or `v0.x` (e.g., `v0.3/...`, `v0.4/...`, `release/*`) are **strictly reserved** for repository owners, core maintainers, and official version releases. Contributor branches must never use these prefixes.
+
+All contributor branches must be branched from `main` and follow these semantic prefix sequences:
+* `feat/<short-description>` — New features, providers, or capabilities (e.g., `feat/bedrock-provider`, `feat/docx-parser`)
+* `fix/<short-description>` — Bug fixes and error handling (e.g., `fix/sqlite-lock`, `fix/chunk-overlap`)
+* `docs/<short-description>` — Documentation guides, docstrings, or tutorials (e.g., `docs/architecture-guide`)
+* `refactor/<short-description>` — Architectural restructuring without functional change (e.g., `refactor/retrieval-factory`)
+* `test/<short-description>` — New test suites, unit tests, or benchmarks (e.g., `test/evaluation-benchmark`)
+* `chore/<short-description>` — Maintenance, build scripts, or dependency updates (e.g., `chore/bump-deps`)
+
+```bash
+# Example: creating a properly named feature branch
+git checkout main
+git pull upstream main
+git checkout -b feat/my-new-feature
 ```
 
 ### Running Tests & Verification
