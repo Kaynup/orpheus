@@ -1,6 +1,6 @@
 [project]
 name = "orpheus-rag"
-version = "0.2.3"
+version = "0.2.4"
 description = "Retrieval-Augmented Generation (RAG) system with persistent vector storage and verifiable source citations."
 readme = "README.md"
 requires-python = ">=3.10"
