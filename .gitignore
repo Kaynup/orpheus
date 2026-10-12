@@ -30,3 +30,4 @@ htmlcov/
 # Dev
 .agents/
 dev-docs/
+graphify-out/
